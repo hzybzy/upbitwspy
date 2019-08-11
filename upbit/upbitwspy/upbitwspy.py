@@ -21,10 +21,10 @@ class Orderbook:
 
 class Orderbook_Unit(object):
     def __init__(self, ask_price, bid_price, ask_size, bid_size):
-        ask_price = 0.0
-        bid_price = 0.0
-        ask_size = 0.0
-        bid_size = 0.0
+        self.ask_price = ask_price
+        self.bid_price = bid_price
+        self.ask_size = ask_size
+        self.bid_size = bid_size
 
 class UpbitWebsocket():
     def __init__(self):
@@ -44,7 +44,7 @@ class UpbitWebsocket():
             while True:
                 data = await websocket.recv()
                 ret = json.loads(data)
-                print(ret)
+                #print(ret)
                 if(ret['type'] == 'ticker'):
                     self.ticker.code = ret['code']
                     self.ticker.opening_price = ret['opening_price']
@@ -54,13 +54,14 @@ class UpbitWebsocket():
                     self.ticker.trade_volume = ret['trade_volume']
                     self.ticker.trade_timestamp = ret['trade_timestamp']
                     self.ticker.timestamp = ret['timestamp']
-                    self.ticker.print_data()
+                    
                 elif(ret['type'] == 'orderbook'):
                     self.orderbook.code = ret['code']
                     self.orderbook.timestamp = ret['timestamp']
                     self.orderbook.units.clear()
-                    for i in range(5):
+                    for i in range(10):
                         self.orderbook.units.append(Orderbook_Unit(ret['orderbook_units'][i]['ask_price'], ret['orderbook_units'][i]['bid_price'], ret['orderbook_units'][i]['ask_size'], ret['orderbook_units'][i]['bid_size']))
+
 
 
 if __name__ == "__main__":
