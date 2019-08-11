@@ -15,10 +15,12 @@ class Ticker:
     def print_data(self):
         print(self.code)
 
-class Orderbook:
-    code = ''
-    timestamp = 0
-    units = []
+class Orderbook(object):
+    def __init__(self, code):
+        self.code = ''
+        self.mydict = {}
+        self.timestamp = 0
+        self.units = []
 
 class Orderbook_Unit(object):
     def __init__(self, ask_price, bid_price, ask_size, bid_size):
@@ -32,9 +34,16 @@ class UpbitWebsocket():
         self.lock = threading.Lock()
         self.uri = "wss://api.upbit.com/websocket/v1"
         self.ticker = Ticker()
-        self.orderbook = Orderbook()
+        self.orderbook = []#Orderbook()
+        self.codeindex = {}
 
     def set_type(self, data_type, codes):
+        if data_type == 'orderbook':
+            l = len(codes)
+            for i in range(l):
+                self.orderbook.append(Orderbook(codes[i]))
+                self.codeindex[codes[i]] = i
+                
         text = ('[{"ticket":"hello"},{"type":"%s","codes":[') % data_type
         i = 1
         l = len(codes)
@@ -59,9 +68,9 @@ class UpbitWebsocket():
 
             while True:
                 data = await websocket.recv()
-                print(data)
+                #print(data)
                 ret = json.loads(data)
-                print(ret)
+                #print(ret)
                 self.lock.acquire()
                 if(ret['type'] == 'ticker'):
                     self.ticker.code = ret['code']
@@ -73,12 +82,11 @@ class UpbitWebsocket():
                     self.ticker.trade_timestamp = ret['trade_timestamp']
                     self.ticker.timestamp = ret['timestamp']
                     
-                elif(ret['type'] == 'orderbook'):
-                    self.orderbook.code = ret['code']
-                    self.orderbook.timestamp = ret['timestamp']
-                    self.orderbook.units.clear()
+                elif(ret['type'] == 'orderbook'): 
+                    self.orderbook[self.codeindex[ret['code']]].timestamp = ret['timestamp']
+                    self.orderbook[self.codeindex[ret['code']]].units.clear()
                     for i in range(10):
-                        self.orderbook.units.append(Orderbook_Unit(ret['orderbook_units'][i]['ask_price'], ret['orderbook_units'][i]['bid_price'], ret['orderbook_units'][i]['ask_size'], ret['orderbook_units'][i]['bid_size']))
+                        self.orderbook[self.codeindex[ret['code']]].units.append(Orderbook_Unit(ret['orderbook_units'][i]['ask_price'], ret['orderbook_units'][i]['bid_price'], ret['orderbook_units'][i]['ask_size'], ret['orderbook_units'][i]['bid_size']))
                 #print('DEBUG')
                 self.lock.release()
 
