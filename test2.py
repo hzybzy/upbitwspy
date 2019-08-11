@@ -18,7 +18,24 @@ def get_real_currency():
     return exchange[0]['basePrice']
 
 if __name__ == "__main__":
-    logging.basicConfig(filename='test.log', format='%(asctime)s - %(message)s', level=logging.INFO, datefmt='20%y-%m-%d %H:%M:%S')
+
+    logger = logging.getLogger('spam_application')
+    logger.setLevel(logging.INFO)
+    # create file handler which logs even debug messages
+    fh = logging.FileHandler('test.log')
+    fh.setLevel(logging.INFO)
+    # create console handler with a higher log level
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.ERROR)
+    # create formatter and add it to the handlers
+    formatter = logging.Formatter('%(asctime)s : %(message)s', datefmt='20%y-%m-%d %H:%M:%S')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+    # add the handlers to the logger
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+
+    #logging.basicConfig(filename='test.log', format='%(asctime)s - %(message)s', level=logging.INFO, datefmt='20%y-%m-%d %H:%M:%S')
     currency_rate = get_real_currency()
     
     upbit = upbitwspy.UpbitWebsocket()
@@ -76,7 +93,7 @@ if __name__ == "__main__":
             text = "KRW2USD, USD2KRW : %.3f, %.3f" % \
                     (((krw_ask - usd_bid*currency_rate)/(usd_bid*currency_rate) * 100),\
                     ((krw_bid - usd_ask*currency_rate)/(usd_ask*currency_rate) * 100))
-            logging.info(text)
+            logger.info(text)
         time.sleep(1)
 
     for t in threading.enumerate():
