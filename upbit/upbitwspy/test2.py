@@ -3,6 +3,7 @@ import upbitwspy
 import time
 import requests #for real currency rate
 import json #for real currency rate
+import logging
 
 def worker(upbit):
     print('start worker')
@@ -17,6 +18,7 @@ def get_real_currency():
     return exchange[0]['basePrice']
 
 if __name__ == "__main__":
+    logging.basicConfig(filename='test.log', format='%(asctime)s - %(message)s', level=logging.INFO, datefmt='20%y-%m-%d %H:%M:%S')
     currency_rate = get_real_currency()
     
     upbit = upbitwspy.UpbitWebsocket()
@@ -71,8 +73,10 @@ if __name__ == "__main__":
             upbit.lock.release()
             #print("KRW-BTC %d %d"%(krw_ask, krw_bid))
             #print("USDT-BTC %f %f"%(usd_ask, usd_bid))
-            print("원화->달러 : %.3f"%((krw_ask - usd_bid*currency_rate)/(usd_bid*currency_rate) * 100))
-            print("달러->원화 : %.3f"%((krw_bid - usd_ask*currency_rate)/(usd_ask*currency_rate) * 100))
+            text = "KRW2USD, USD2KRW : %.3f, %.3f" % \
+                    (((krw_ask - usd_bid*currency_rate)/(usd_bid*currency_rate) * 100),\
+                    ((krw_bid - usd_ask*currency_rate)/(usd_ask*currency_rate) * 100))
+            logging.info(text)
         time.sleep(1)
 
     for t in threading.enumerate():
