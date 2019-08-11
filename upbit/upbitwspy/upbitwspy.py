@@ -1,6 +1,7 @@
 import asyncio
 import websockets
 import json
+import threading
 
 class Ticker:
     code = ''
@@ -28,14 +29,29 @@ class Orderbook_Unit(object):
 
 class UpbitWebsocket():
     def __init__(self):
+        self.lock = threading.Lock()
         self.uri = "wss://api.upbit.com/websocket/v1"
         self.ticker = Ticker()
         self.orderbook = Orderbook()
 
     def set_type(self, data_type, codes):
-        self.str = '[{"ticket":"hello"},{"type":"%s","codes":["%s"]}]'%(data_type, codes)
+        text = ('[{"ticket":"hello"},{"type":"%s","codes":[') % data_type
+        i = 1
+        l = len(codes)
+        for c in codes:    
+            text = text + "\"" + c + "\""
+            if i != l:
+                text = text + ", "
+                i = i +1
+
+        text = text + ']}]'
+        self.str = text #'[{"ticket":"hello"},{"type":"%s","codes":%s}]'%(data_type, codes)
+        print(self.str)
+
     def run(self):
-        asyncio.get_event_loop().run_until_complete(self.loop())
+        myloop = asyncio.new_event_loop()
+        asyncio.set_event_loop(myloop)
+        myloop.run_until_complete(self.loop())
 
     async def loop(self):
         async with websockets.connect(self.uri) as websocket:
@@ -43,8 +59,10 @@ class UpbitWebsocket():
 
             while True:
                 data = await websocket.recv()
+                print(data)
                 ret = json.loads(data)
-                #print(ret)
+                print(ret)
+                self.lock.acquire()
                 if(ret['type'] == 'ticker'):
                     self.ticker.code = ret['code']
                     self.ticker.opening_price = ret['opening_price']
@@ -61,13 +79,19 @@ class UpbitWebsocket():
                     self.orderbook.units.clear()
                     for i in range(10):
                         self.orderbook.units.append(Orderbook_Unit(ret['orderbook_units'][i]['ask_price'], ret['orderbook_units'][i]['bid_price'], ret['orderbook_units'][i]['ask_size'], ret['orderbook_units'][i]['bid_size']))
+                #print('DEBUG')
+                self.lock.release()
 
 
 
 if __name__ == "__main__":
     upbit = UpbitWebsocket()
-#    upbit.set_type("ticker","KRW-BTC")
-    upbit.set_type("orderbook","KRW-BTC")
+    upbit.set_type("orderbook",["KRW-BTC","USDT-BTC"])
     upbit.run()
+    #t = threading.Thread(target=worker, args=(upbit,))
+
+    #main_thread = threading.currentThread()
+#    upbit.set_type("ticker","KRW-BTC")
+
 
 
