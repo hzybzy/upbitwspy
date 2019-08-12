@@ -55,7 +55,7 @@ class UpbitWebsocket():
 
         text = text + ']}]'
         self.str = text #'[{"ticket":"hello"},{"type":"%s","codes":%s}]'%(data_type, codes)
-        print(self.str)
+        #print(self.str)
 
     def run(self):
         myloop = asyncio.new_event_loop()
@@ -68,7 +68,7 @@ class UpbitWebsocket():
 
             while True:
                 data = await websocket.recv()
-                #print(data)
+              #  print(data)
                 ret = json.loads(data)
                 #print(ret)
                 self.lock.acquire()
