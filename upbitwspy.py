@@ -2,6 +2,7 @@ import asyncio
 import websockets
 import json
 import threading
+import logging
 
 class Ticker:
     code = ''
@@ -63,32 +64,38 @@ class UpbitWebsocket():
         myloop.run_until_complete(self.loop())
 
     async def loop(self):
-        async with websockets.connect(self.uri) as websocket:
-            await websocket.send(self.str)
+        try:
+            logging.info('try websocket connect')
+            async with websockets.connect(self.uri) as websocket:
+                await websocket.send(self.str)
 
-            while True:
-                data = await websocket.recv()
-              #  print(data)
-                ret = json.loads(data)
-                #print(ret)
-                self.lock.acquire()
-                if(ret['type'] == 'ticker'):
-                    self.ticker.code = ret['code']
-                    self.ticker.opening_price = ret['opening_price']
-                    self.ticker.high_price = ret['high_price']
-                    self.ticker.low_price = ret['low_price']
-                    self.ticker.trade_price = ret['trade_price']
-                    self.ticker.trade_volume = ret['trade_volume']
-                    self.ticker.trade_timestamp = ret['trade_timestamp']
-                    self.ticker.timestamp = ret['timestamp']
-                    
-                elif(ret['type'] == 'orderbook'): 
-                    self.orderbook[self.codeindex[ret['code']]].timestamp = ret['timestamp']
-                    self.orderbook[self.codeindex[ret['code']]].units.clear()
-                    for i in range(10):
-                        self.orderbook[self.codeindex[ret['code']]].units.append(Orderbook_Unit(ret['orderbook_units'][i]['ask_price'], ret['orderbook_units'][i]['bid_price'], ret['orderbook_units'][i]['ask_size'], ret['orderbook_units'][i]['bid_size']))
-                #print('DEBUG')
-                self.lock.release()
+                while websocket.open:
+                    data = await websocket.recv()
+                #  print(data)
+                    ret = json.loads(data)
+                    #print(ret)
+                    self.lock.acquire()
+                    if(ret['type'] == 'ticker'):
+                        self.ticker.code = ret['code']
+                        self.ticker.opening_price = ret['opening_price']
+                        self.ticker.high_price = ret['high_price']
+                        self.ticker.low_price = ret['low_price']
+                        self.ticker.trade_price = ret['trade_price']
+                        self.ticker.trade_volume = ret['trade_volume']
+                        self.ticker.trade_timestamp = ret['trade_timestamp']
+                        self.ticker.timestamp = ret['timestamp']
+                        
+                    elif(ret['type'] == 'orderbook'): 
+                        self.orderbook[self.codeindex[ret['code']]].timestamp = ret['timestamp']
+                        self.orderbook[self.codeindex[ret['code']]].units.clear()
+                        for i in range(10):
+                            self.orderbook[self.codeindex[ret['code']]].units.append(Orderbook_Unit(ret['orderbook_units'][i]['ask_price'], ret['orderbook_units'][i]['bid_price'], ret['orderbook_units'][i]['ask_size'], ret['orderbook_units'][i]['bid_size']))
+                    #print('DEBUG')
+                    self.lock.release()
+        except Exception as e:
+            logging.info(e)            
+            self.run()
+
 
 
 
