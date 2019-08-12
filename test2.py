@@ -19,29 +19,15 @@ def get_real_currency():
 
 if __name__ == "__main__":
 
-    logger = logging.getLogger('spam_application')
-    logger.setLevel(logging.INFO)
-    # create file handler which logs even debug messages
-    fh = logging.FileHandler('test.log')
-    fh.setLevel(logging.INFO)
-    # create console handler with a higher log level
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.ERROR)
-    # create formatter and add it to the handlers
-    formatter = logging.Formatter('%(asctime)s : %(message)s', datefmt='20%y-%m-%d %H:%M:%S')
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-    # add the handlers to the logger
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-
-    #logging.basicConfig(filename='test.log', format='%(asctime)s - %(message)s', level=logging.INFO, datefmt='20%y-%m-%d %H:%M:%S')
+    logging.basicConfig(filename='test.log', format='%(asctime)s, %(message)s', level=logging.INFO, datefmt='20%y-%m-%d %H:%M:%S')
     currency_rate = get_real_currency()
     
+    logging.debug('get wallet')
     upbit = upbitwspy.UpbitWebsocket()
     t = threading.Thread(target=worker, args=(upbit,))
     t.start()
     
+    logging.debug('thread-ws start')
     main_thread = threading.currentThread()
     #김프 공식 : (국내-해외)/해외 * 100
     #ask_price : 매도
@@ -49,21 +35,25 @@ if __name__ == "__main__":
     #Direction (시장가 거래 기준)
     #원화 -> BTC -> 달러 : (국내_ask-해외_bid)/해외_bid * 100
     #달러 -> BTC -> 원화 : (국내_bid-해외_ask)/해외_ask * 100
+    logging.debug('thread-main start')
     while True:
+        logging.debug('loop start on main')
         
         if upbit.codeindex:
-            #krw_ask = 0.0
-            #krw_bid = 0.0
+            krw_ask = 0.0
+            krw_bid = 0.0
             krw_ask_qty = 0.0
             krw_bid_qty = 0.0
-            #usd_ask = 0.0
-            #usd_bid = 0.0
+            usd_ask = 0.0
+            usd_bid = 0.0
             usd_ask_qty = 0.0
             usd_bid_qty = 0.0
             krw_limit = 50000
             usd_limit = krw_limit / currency_rate
             
+            logging.debug('lock on main')
             upbit.lock.acquire()
+            logging.debug('locked on main')
             if upbit.orderbook[upbit.codeindex['KRW-BTC']].units:
                 
                 for i in range(10):
@@ -90,13 +80,31 @@ if __name__ == "__main__":
             upbit.lock.release()
             #print("KRW-BTC %d %d"%(krw_ask, krw_bid))
             #print("USDT-BTC %f %f"%(usd_ask, usd_bid))
-            text = "KRW2USD, USD2KRW : %.3f, %.3f" % \
-                    (((krw_ask - usd_bid*currency_rate)/(usd_bid*currency_rate) * 100),\
-                    ((krw_bid - usd_ask*currency_rate)/(usd_ask*currency_rate) * 100))
-            logger.info(text)
+            if usd_bid > 0.0 and usd_ask > 0.0 and krw_ask > 0.0 and krw_bid > 0.0 and currency_rate > 0.0:
+                KRW2USD = (krw_ask - usd_bid*currency_rate)/(usd_bid*currency_rate) * 100
+                USD2KRW = (krw_bid - usd_ask*currency_rate)/(usd_ask*currency_rate) * 100
+                text = 'KRW2USD, USD2KRW, %.3f, %.3f' % (KRW2USD, USD2KRW)
+                logging.info(text)
         time.sleep(1)
 
     for t in threading.enumerate():
         if t is not main_thread:
             t.join()
-
+'''
+    logger = logging.getLogger('spam_application')
+    logger.setLevel(logging.INFO)
+    # create file handler which logs even debug messages
+    fh = logging.FileHandler('test.log')
+    fh.setLevel(logging.INFO)
+    # create console handler with a higher log level
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.ERROR)
+    # create formatter and add it to the handlers
+    formatter = logging.Formatter('%(asctime)s : %(message)s', datefmt='20%y-%m-%d %H:%M:%S')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+    # add the handlers to the logger
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+    logger.info('Started')
+'''
