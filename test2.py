@@ -5,40 +5,55 @@ import requests #for real currency rate
 import json #for real currency rate
 import logging
 
+exchange_rate = 0.0
 def worker(upbit):
-    print('start worker')
+    #start worker
     upbit.set_type("orderbook",["KRW-BTC","USDT-BTC"])
     upbit.run()
+
+
+def worker_timer():
+    while True:
+        time.sleep(1000)
+        exchange_rate = get_real_currency()
+        logging.info('exchange rate was updated %.2f'%exchange_rate)
+
 
 def get_real_currency():
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
     url = 'https://quotation-api-cdn.dunamu.com/v1/forex/recent?codes=FRX.KRWUSD'
-    exchange =requests.get(url, headers=headers).json()
+    try:
+        ret =requests.get(url, headers=headers).json()
+    except:
+        return 0
     #TODO : tracking date "date":"2019-08-09","time":"20:01:00"
-    return exchange[0]['basePrice']
+    return ret[0]['basePrice']
 
 if __name__ == "__main__":
 
-    logging.basicConfig(filename='test.log', format='%(asctime)s, %(message)s', level=logging.INFO, datefmt='20%y-%m-%d %H:%M:%S')
-    currency_rate = get_real_currency()
-    
-    logging.debug('get wallet')
+    #logging.basicConfig(filename='test.log', format='%(asctime)s, %(message)s', level=logging.INFO, datefmt='20%y-%m-%d %H:%M:%S')
+    logging.basicConfig(format='%(asctime)s, %(message)s', level=logging.INFO, datefmt='20%y-%m-%d %H:%M:%S')
+    exchange_rate = get_real_currency()
+    logging.info('exchange rate was updated %.2f'%exchange_rate)
+
+
     upbit = upbitwspy.UpbitWebsocket()
-    t = threading.Thread(target=worker, args=(upbit,))
-    t.start()
-    
-    logging.debug('thread-ws start')
+
+    t1 = threading.Thread(target=worker, args=(upbit,))
+    t1.start()
+
+    t2 = threading.Thread(target=worker_timer)
+    t2.start()
+        
     main_thread = threading.currentThread()
     #김프 공식 : (국내-해외)/해외 * 100
     #ask_price : 매도
     #bid_price : 매수
     #Direction (시장가 거래 기준)
-    #원화 -> BTC -> 달러 : (국내_ask-해외_bid)/해외_bid * 100
-    #달러 -> BTC -> 원화 : (국내_bid-해외_ask)/해외_ask * 100
-    logging.debug('thread-main start')
+    #원화 -> BTC -> 달러 : (국내_ask-해외_bid)/해외_bid * 100 // 낮은게 좋아
+    #달러 -> BTC -> 원화 : (국내_bid-해외_ask)/해외_ask * 100 // 높은게 좋아
+    
     while True:
-        logging.debug('loop start on main')
-        
         if upbit.codeindex:
             krw_ask = 0.0
             krw_bid = 0.0
@@ -49,13 +64,19 @@ if __name__ == "__main__":
             usd_ask_qty = 0.0
             usd_bid_qty = 0.0
             krw_limit = 50000
-            usd_limit = krw_limit / currency_rate
+            usd_limit = 0.0
+            if exchange_rate:
+                usd_limit = krw_limit / exchange_rate
             
-            logging.debug('lock on main')
+            krw_timestamp = 0.0
+            usd_timestamp = 0.0
+            
+            
             upbit.lock.acquire()
-            logging.debug('locked on main')
+            
             if upbit.orderbook[upbit.codeindex['KRW-BTC']].units:
-                
+                krw_timestamp = upbit.orderbook[upbit.codeindex['KRW-BTC']].timestamp
+                usd_timestamp = upbit.orderbook[upbit.codeindex['USDT-BTC']].timestamp
                 for i in range(10):
                     krw_ask = upbit.orderbook[upbit.codeindex['KRW-BTC']].units[i].ask_price
                     krw_ask_qty += upbit.orderbook[upbit.codeindex['KRW-BTC']].units[i].ask_size
@@ -78,33 +99,19 @@ if __name__ == "__main__":
                         break              
 
             upbit.lock.release()
-            #print("KRW-BTC %d %d"%(krw_ask, krw_bid))
-            #print("USDT-BTC %f %f"%(usd_ask, usd_bid))
-            if usd_bid > 0.0 and usd_ask > 0.0 and krw_ask > 0.0 and krw_bid > 0.0 and currency_rate > 0.0:
-                KRW2USD = (krw_ask - usd_bid*currency_rate)/(usd_bid*currency_rate) * 100
-                USD2KRW = (krw_bid - usd_ask*currency_rate)/(usd_ask*currency_rate) * 100
-                text = 'KRW2USD, USD2KRW, %.3f, %.3f' % (KRW2USD, USD2KRW)
+            
+            #timestamp 차이 60 미만, 김프 계산식에 사용할 변수들 0이 아닌 경우 진행
+            if time.time() * 2000 - krw_timestamp - usd_timestamp < 60000 and usd_bid > 0.0 and usd_ask > 0.0 and krw_ask > 0.0 and krw_bid > 0.0 and exchange_rate > 0.0:
+                KRW2USD = (krw_ask - usd_bid*exchange_rate)/(usd_bid*exchange_rate) * 100
+                USD2KRW = (krw_bid - usd_ask*exchange_rate)/(usd_ask*exchange_rate) * 100
+                
+                text = 'KRW2USD, USD2KRW, %.3f, %.3f' % (KRW2USD, USD2KRW)#, krw_timestamp/1000, usd_timestamp/1000, time.time())                
+                #text = '%d ask : %f %f bid : %f %f'% (usd_timestamp/1000, usd_ask, usd_ask_qty, usd_bid, usd_bid_qty)
                 logging.info(text)
+            else:
+                logging.info('Some error on main')
         time.sleep(1)
 
     for t in threading.enumerate():
         if t is not main_thread:
             t.join()
-'''
-    logger = logging.getLogger('spam_application')
-    logger.setLevel(logging.INFO)
-    # create file handler which logs even debug messages
-    fh = logging.FileHandler('test.log')
-    fh.setLevel(logging.INFO)
-    # create console handler with a higher log level
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.ERROR)
-    # create formatter and add it to the handlers
-    formatter = logging.Formatter('%(asctime)s : %(message)s', datefmt='20%y-%m-%d %H:%M:%S')
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-    # add the handlers to the logger
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-    logger.info('Started')
-'''
