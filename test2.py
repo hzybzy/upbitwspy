@@ -6,6 +6,9 @@ import json #for real currency rate
 import logging
 
 exchange_rate = 0.0
+KRW2USD_limit = -3.0 #역프 때 이득
+USD2KRW_limit = 0.0 #김프 때 이득
+
 def worker(upbit):
     #start worker
     upbit.set_type("orderbook",["KRW-BTC","USDT-BTC"])
@@ -105,6 +108,13 @@ if __name__ == "__main__":
                 KRW2USD = (krw_ask - usd_bid*exchange_rate)/(usd_bid*exchange_rate) * 100
                 USD2KRW = (krw_bid - usd_ask*exchange_rate)/(usd_ask*exchange_rate) * 100
                 
+                '''
+                if KRW2USD < KRW2USD_limit: #역프 설정된 값보다 작은 경우, 실행
+                    logging.info('KRW2USD')
+                elif USD2KRW > USD2KRW_limit: #김프 설정된 값보다 큰 경우, 실행
+                    logging.info('USD2KRW')
+                '''
+
                 text = 'KRW2USD, USD2KRW, %.3f, %.3f' % (KRW2USD, USD2KRW)#, krw_timestamp/1000, usd_timestamp/1000, time.time())                
                 #text = '%d ask : %f %f bid : %f %f'% (usd_timestamp/1000, usd_ask, usd_ask_qty, usd_bid, usd_bid_qty)
                 logging.info(text)
