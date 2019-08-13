@@ -4,6 +4,7 @@ import time
 import requests #for real currency rate
 import json #for real currency rate
 import logging
+import platform
 
 exchange_rate = 0.0
 KRW2USD_limit = -3.0 #역프 때 이득
@@ -43,8 +44,10 @@ def get_real_currency():
 
 if __name__ == "__main__":
 
-    #logging.basicConfig(filename='test.log', format='%(asctime)s, %(message)s', level=logging.INFO, datefmt='20%y-%m-%d %H:%M:%S')
-    logging.basicConfig(format='%(asctime)s, %(message)s', level=logging.INFO, datefmt='20%y-%m-%d %H:%M:%S')
+    if platform.system() == 'Linux':
+        logging.basicConfig(filename='test.log', format='%(asctime)s, %(message)s', level=logging.INFO, datefmt='20%y-%m-%d %H:%M:%S')
+    else:       # equal 'Windows'
+        logging.basicConfig(format='%(asctime)s, %(message)s', level=logging.INFO, datefmt='20%y-%m-%d %H:%M:%S')
     exchange_rate = get_real_currency()
     logging.info('exchange rate was updated %.2f'%exchange_rate)
 
