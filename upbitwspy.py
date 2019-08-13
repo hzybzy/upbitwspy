@@ -39,6 +39,7 @@ class UpbitWebsocket():
         self.ticker = Ticker()
         self.orderbook = []#Orderbook()
         self.codeindex = {}
+        self.data_flag = False
 
     def set_type(self, data_type, codes):
         if data_type == 'orderbook':
@@ -63,7 +64,9 @@ class UpbitWebsocket():
     def run(self):
         myloop = asyncio.new_event_loop()
         asyncio.set_event_loop(myloop)
-        myloop.run_until_complete(self.loop())
+        while True:
+            myloop.run_until_complete(self.loop())
+            time.sleep(10)
 
     async def loop(self):
         try:
@@ -78,6 +81,7 @@ class UpbitWebsocket():
                     #print(ret)
                     self.lock.acquire()
                     if(ret['type'] == 'ticker'):
+                        self.data_flag = True
                         self.ticker.code = ret['code']
                         self.ticker.opening_price = ret['opening_price']
                         self.ticker.high_price = ret['high_price']
@@ -88,6 +92,7 @@ class UpbitWebsocket():
                         self.ticker.timestamp = ret['timestamp']
                         
                     elif(ret['type'] == 'orderbook'): 
+                        self.data_flag = True
                         #self.orderbook[self.codeindex[ret['code']]].timestamp = ret['timestamp']
                         self.orderbook[self.codeindex[ret['code']]].timestamp = time.time()
                         self.orderbook[self.codeindex[ret['code']]].units.clear()
@@ -96,8 +101,8 @@ class UpbitWebsocket():
                     #print('DEBUG')
                     self.lock.release()
         except Exception as e:
-            logging.info(e)            
-            self.run()
+            logging.info(e)
+            
 
 
 
