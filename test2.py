@@ -119,7 +119,7 @@ if __name__ == "__main__":
                 #text = '%d ask : %f %f bid : %f %f'% (usd_timestamp/1000, usd_ask, usd_ask_qty, usd_bid, usd_bid_qty)
                 logging.info(text)
             else:
-                logging.info('Some error on main')
+                logging.info('Error %d %d %d %f %f %f %f %f'% (time.time() * 2000 - krw_timestamp - usd_timestamp, krw_timestamp,usd_timestamp, usd_bid, usd_ask, krw_ask, krw_bid, exchange_rate))
         time.sleep(1)
 
     for t in threading.enumerate():
