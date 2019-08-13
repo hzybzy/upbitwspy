@@ -3,6 +3,8 @@ import websockets
 import json
 import threading
 import logging
+import time
+
 
 class Ticker:
     code = ''
@@ -86,7 +88,8 @@ class UpbitWebsocket():
                         self.ticker.timestamp = ret['timestamp']
                         
                     elif(ret['type'] == 'orderbook'): 
-                        self.orderbook[self.codeindex[ret['code']]].timestamp = ret['timestamp']
+                        #self.orderbook[self.codeindex[ret['code']]].timestamp = ret['timestamp']
+                        self.orderbook[self.codeindex[ret['code']]].timestamp = time.time()
                         self.orderbook[self.codeindex[ret['code']]].units.clear()
                         for i in range(10):
                             self.orderbook[self.codeindex[ret['code']]].units.append(Orderbook_Unit(ret['orderbook_units'][i]['ask_price'], ret['orderbook_units'][i]['bid_price'], ret['orderbook_units'][i]['ask_size'], ret['orderbook_units'][i]['bid_size']))

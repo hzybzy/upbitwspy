@@ -103,8 +103,8 @@ if __name__ == "__main__":
 
             upbit.lock.release()
             
-            #timestamp 차이 60 미만, 김프 계산식에 사용할 변수들 0이 아닌 경우 진행
-            if time.time() * 2000 - krw_timestamp - usd_timestamp < 60000 and usd_bid > 0.0 and usd_ask > 0.0 and krw_ask > 0.0 and krw_bid > 0.0 and exchange_rate > 0.0:
+            #timestamp 차이 10초 미만, 김프 계산식에 사용할 변수들 0이 아닌 경우 진행
+            if time.time() - krw_timestamp - usd_timestamp < 10 and usd_bid > 0.0 and usd_ask > 0.0 and krw_ask > 0.0 and krw_bid > 0.0 and exchange_rate > 0.0:
                 KRW2USD = (krw_ask - usd_bid*exchange_rate)/(usd_bid*exchange_rate) * 100
                 USD2KRW = (krw_bid - usd_ask*exchange_rate)/(usd_ask*exchange_rate) * 100
                 
