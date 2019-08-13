@@ -34,7 +34,8 @@ class Orderbook_Unit(object):
 
 class UpbitWebsocket():
     def __init__(self):
-        self.lock = threading.Lock()
+        self.lock_a = threading.Lock()
+        self.lock_b = threading.Lock()
         self.uri = "wss://api.upbit.com/websocket/v1"
         self.ticker = Ticker()
         self.orderbook = []#Orderbook()
@@ -79,7 +80,8 @@ class UpbitWebsocket():
                 #  print(data)
                     ret = json.loads(data)
                     #print(ret)
-                    self.lock.acquire()
+                    self.lock_a.acquire()
+                    self.lock_b.acquire()
                     if(ret['type'] == 'ticker'):
                         self.data_flag = True
                         self.ticker.code = ret['code']
@@ -99,7 +101,8 @@ class UpbitWebsocket():
                         for i in range(10):
                             self.orderbook[self.codeindex[ret['code']]].units.append(Orderbook_Unit(ret['orderbook_units'][i]['ask_price'], ret['orderbook_units'][i]['bid_price'], ret['orderbook_units'][i]['ask_size'], ret['orderbook_units'][i]['bid_size']))
                     #print('DEBUG')
-                    self.lock.release()
+                    self.lock_b.release()
+                    self.lock_a.release()
         except Exception as e:
             logging.info(e)
             
