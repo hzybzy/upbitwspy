@@ -52,7 +52,7 @@ class Tradingbot():
             if self.exchange_rate == 0.0:
                 time.sleep(10)
             else:
-                time.sleep(1000)
+                time.sleep(60)
             self.get_real_currency()
             #logging.info('exchange rate was updated %.2f'%self.exchange_rate)
     
