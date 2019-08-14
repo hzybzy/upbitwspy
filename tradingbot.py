@@ -58,7 +58,7 @@ class Tradingbot():
     
     def worker_logger(self):
         while True:        
-            text = '%.3f, %.3f, %d, %d, %f, %f, %f' % (self.KRW2USD, self.USD2KRW, self.krw_ask, self.krw_bid, self.usd_ask, self.usd_bid, self.exchange_rate)
+            text = '%.3f, %.3f, %d, %d, %f, %f, %.2f' % (self.KRW2USD, self.USD2KRW, self.krw_ask, self.krw_bid, self.usd_ask, self.usd_bid, self.exchange_rate)
             logging.info(text)
             #logging.info('%d %d %d %f %f %f %f %f'% (time.time() * 2000 - self.krw_timestamp - self.usd_timestamp, self.krw_timestamp,self.usd_timestamp, self.usd_bid, self.usd_ask, self.krw_ask, self.krw_bid, self.exchange_rate))
             time.sleep(1)
@@ -79,7 +79,7 @@ class Tradingbot():
         while True:
             if upbitws.codeindex:             
                 if self.exchange_rate:
-                    usd_limit = self.krw_limit / self.exchange_rate
+                    self.usd_limit = self.krw_limit / self.exchange_rate
                                    
                 update_flag = False                
                 upbitws.lock_a.acquire()
@@ -125,7 +125,7 @@ class Tradingbot():
                         elif USD2KRW > USD2KRW_limit: #김프 설정된 값보다 큰 경우, 실행
                             logging.info('USD2KRW')
                         '''
-                  
+                        time.sleep(0.1)
                     else:
                         logging.info('Error %d %d %d %f %f %f %f %f'% (time.time() * 2000 - self.krw_timestamp - self.usd_timestamp, self.krw_timestamp,self.usd_timestamp, self.usd_bid, self.usd_ask, self.krw_ask, self.krw_bid, self.exchange_rate))
           
