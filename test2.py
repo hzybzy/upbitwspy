@@ -91,7 +91,7 @@ if __name__ == "__main__":
             
             
             update_flag = False
-            upbit.lock.acquire()
+            upbit.lock_a.acquire()
             
             if upbit.data_flag and upbit.orderbook[upbit.codeindex['KRW-BTC']].units:
                 krw_timestamp = upbit.orderbook[upbit.codeindex['KRW-BTC']].timestamp
@@ -118,7 +118,7 @@ if __name__ == "__main__":
                         break              
                 upbit.data_flag = False
                 update_flag = True
-            upbit.lock.release()
+            upbit.lock_a.release()
             
             #timestamp 차이 10초 미만, 김프 계산식에 사용할 변수들 0이 아닌 경우 진행
             if update_flag:

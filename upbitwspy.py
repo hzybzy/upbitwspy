@@ -81,7 +81,7 @@ class UpbitWebsocket():
                     ret = json.loads(data)
                     #print(ret)
                     self.lock_a.acquire()
-                    self.lock_b.acquire()
+                    #self.lock_b.acquire()
                     if(ret['type'] == 'ticker'):
                         self.data_flag = True
                         self.ticker.code = ret['code']
@@ -101,7 +101,7 @@ class UpbitWebsocket():
                         for i in range(10):
                             self.orderbook[self.codeindex[ret['code']]].units.append(Orderbook_Unit(ret['orderbook_units'][i]['ask_price'], ret['orderbook_units'][i]['bid_price'], ret['orderbook_units'][i]['ask_size'], ret['orderbook_units'][i]['bid_size']))
                     #print('DEBUG')
-                    self.lock_b.release()
+                    #self.lock_b.release()
                     self.lock_a.release()
         except Exception as e:
             logging.info(e)

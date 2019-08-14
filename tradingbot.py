@@ -28,16 +28,25 @@ class Tradingbot():
     KRW2USD = 0.0
     USD2KRW = 0.0
 
+    krw_ask = 0.0
+    krw_bid = 0.0
+    krw_ask_qty = 0.0
+    krw_bid_qty = 0.0
+    usd_ask = 0.0
+    usd_bid = 0.0
+    usd_ask_qty = 0.0
+    usd_bid_qty = 0.0
+    krw_limit = 50000
+    usd_limit = 0.0
+    
+    krw_timestamp = 0.0
+    usd_timestamp = 0.0
+
     def __init__(self, key, secret):
         self.KEY = key
         self.SECRET = secret
 
-    def worker_get_orderbook(self, upbit):
-        #start worker
-        upbit.set_type("orderbook",["KRW-BTC","USDT-BTC"])
-        upbit.run()
-    
-    
+        
     def worker_exchange_rate(self):
         while True:
             if self.exchange_rate == 0.0:
@@ -45,13 +54,13 @@ class Tradingbot():
             else:
                 time.sleep(1000)
             self.get_real_currency()
-            logging.info('exchange rate was updated %.2f'%self.exchange_rate)
+            #logging.info('exchange rate was updated %.2f'%self.exchange_rate)
     
     def worker_logger(self):
         while True:        
-            text = 'KRW2USD, USD2KRW, %.3f, %.3f' % (self.KRW2USD, self.USD2KRW)#, krw_timestamp/1000, usd_timestamp/1000, time.time())                
-            #text = '%d ask : %f %f bid : %f %f'% (usd_timestamp/1000, usd_ask, usd_ask_qty, usd_bid, usd_bid_qty)
+            text = '%.3f, %.3f, %d, %d, %f, %f, %f' % (self.KRW2USD, self.USD2KRW, self.krw_ask, self.krw_bid, self.usd_ask, self.usd_bid, self.exchange_rate)
             logging.info(text)
+            #logging.info('%d %d %d %f %f %f %f %f'% (time.time() * 2000 - self.krw_timestamp - self.usd_timestamp, self.krw_timestamp,self.usd_timestamp, self.usd_bid, self.usd_ask, self.krw_ask, self.krw_bid, self.exchange_rate))
             time.sleep(1)
             #time.sleep(1)
     
@@ -64,6 +73,62 @@ class Tradingbot():
             self.exchange_rate = 0
         #TODO : tracking date "date":"2019-08-09","time":"20:01:00"
         self.exchange_rate = ret[0]['basePrice']
+        logging.info('exchange rate was updated %.2f'%tb.exchange_rate)
+        
+    def loop(self, upbitws):
+        while True:
+            if upbitws.codeindex:             
+                if self.exchange_rate:
+                    usd_limit = self.krw_limit / self.exchange_rate
+                                   
+                update_flag = False                
+                upbitws.lock_a.acquire()
+                
+                #get data from upbit websocket
+                if upbitws.data_flag and upbitws.orderbook[upbitws.codeindex['KRW-BTC']].units and upbitws.orderbook[upbitws.codeindex['USDT-BTC']].units:
+                    self.krw_timestamp = upbitws.orderbook[upbitws.codeindex['KRW-BTC']].timestamp
+                    self.usd_timestamp = upbitws.orderbook[upbitws.codeindex['USDT-BTC']].timestamp
+                    for i in range(10):
+                        self.krw_ask = upbitws.orderbook[upbitws.codeindex['KRW-BTC']].units[i].ask_price
+                        self.krw_ask_qty += upbitws.orderbook[upbitws.codeindex['KRW-BTC']].units[i].ask_size
+                        if self.krw_ask_qty * self.krw_ask > self.krw_limit:
+                            break
+                    for i in range(10):
+                        self.krw_bid = upbitws.orderbook[upbitws.codeindex['KRW-BTC']].units[i].bid_price
+                        self.krw_bid_qty += upbitws.orderbook[upbitws.codeindex['KRW-BTC']].units[i].bid_size
+                        if self.krw_bid_qty * self.krw_bid > self.krw_limit:
+                            break
+                    for i in range(10):
+                        self.usd_ask = upbitws.orderbook[upbitws.codeindex['USDT-BTC']].units[i].ask_price
+                        self.usd_ask_qty += upbitws.orderbook[upbitws.codeindex['USDT-BTC']].units[i].ask_size
+                        if self.usd_ask_qty * self.usd_ask > self.usd_limit:
+                            break
+                    for i in range(10):
+                        self.usd_bid = upbitws.orderbook[upbitws.codeindex['USDT-BTC']].units[i].bid_price
+                        self.usd_bid_qty += upbitws.orderbook[upbitws.codeindex['USDT-BTC']].units[i].bid_size
+                        if self.usd_bid_qty * self.usd_bid > self.usd_limit:
+                            break              
+                        upbitws.data_flag = False
+                    update_flag = True                
+                
+                upbitws.lock_a.release()
+                
+                #timestamp 차이 10초 미만, 김프 계산식에 사용할 변수들 0이 아닌 경우 진행
+                if update_flag:
+                    if time.time() - self.krw_timestamp - self.usd_timestamp < 10 and self.usd_bid > 0.0 and self.usd_ask > 0.0 and self.krw_ask > 0.0 and self.krw_bid > 0.0 and self.exchange_rate > 0.0:
+                        self.KRW2USD = (self.krw_ask - self.usd_bid * self.exchange_rate)/(self.usd_bid * self.exchange_rate) * 100
+                        self.USD2KRW = (self.krw_bid - self.usd_ask * self.exchange_rate)/(self.usd_ask * self.exchange_rate) * 100
+                        
+                        '''
+                        if KRW2USD < KRW2USD_limit: #역프 설정된 값보다 작은 경우, 실행
+                            logging.info('KRW2USD')
+                        elif USD2KRW > USD2KRW_limit: #김프 설정된 값보다 큰 경우, 실행
+                            logging.info('USD2KRW')
+                        '''
+                  
+                    else:
+                        logging.info('Error %d %d %d %f %f %f %f %f'% (time.time() * 2000 - self.krw_timestamp - self.usd_timestamp, self.krw_timestamp,self.usd_timestamp, self.usd_bid, self.usd_ask, self.krw_ask, self.krw_bid, self.exchange_rate))
+          
 
     def get_accounts(self):
         upbit = Upbitpy(self.KEY, self.SECRET)
@@ -121,6 +186,12 @@ class Tradingbot():
             return None
         return ret[0]['uuid']
 
+#For thread
+
+def worker_get_orderbook(upbit):
+    #start worker
+    upbit.set_type("orderbook",["KRW-BTC","USDT-BTC"])
+    upbit.run()
 
 if __name__ == '__main__':
     if platform.system() == 'Linux':
@@ -132,10 +203,11 @@ if __name__ == '__main__':
     tb = Tradingbot(mykey.ACCESS_KEY, mykey.SECRET_KEY)
     tb.get_accounts()
     tb.get_real_currency()
+    
 
     upbitws = upbitwspy.UpbitWebsocket()
 
-    t1 = threading.Thread(target=tb.worker_get_orderbook, args=(upbitws,))
+    t1 = threading.Thread(target=worker_get_orderbook, args=(upbitws,))
     t1.start()
 
     t2 = threading.Thread(target=tb.worker_exchange_rate)
@@ -146,73 +218,7 @@ if __name__ == '__main__':
 
     main_thread = threading.currentThread()
 
-    while True:
-        if upbitws.codeindex:
-            krw_ask = 0.0
-            krw_bid = 0.0
-            krw_ask_qty = 0.0
-            krw_bid_qty = 0.0
-            usd_ask = 0.0
-            usd_bid = 0.0
-            usd_ask_qty = 0.0
-            usd_bid_qty = 0.0
-            krw_limit = 50000
-            usd_limit = 0.0
-            if tb.exchange_rate:
-                usd_limit = krw_limit / tb.exchange_rate
-            
-            krw_timestamp = 0.0
-            usd_timestamp = 0.0
-            
-            
-            update_flag = False
-            upbitws.lock_b.acquire()
-            upbitws.lock_a.acquire()
-            
-            if upbitws.data_flag and upbitws.orderbook[upbitws.codeindex['KRW-BTC']].units:
-                krw_timestamp = upbitws.orderbook[upbitws.codeindex['KRW-BTC']].timestamp
-                usd_timestamp = upbitws.orderbook[upbitws.codeindex['USDT-BTC']].timestamp
-                for i in range(10):
-                    krw_ask = upbitws.orderbook[upbitws.codeindex['KRW-BTC']].units[i].ask_price
-                    krw_ask_qty += upbitws.orderbook[upbitws.codeindex['KRW-BTC']].units[i].ask_size
-                    if krw_ask_qty * krw_ask > krw_limit:
-                        break
-                for i in range(10):
-                    krw_bid = upbitws.orderbook[upbitws.codeindex['KRW-BTC']].units[i].bid_price
-                    krw_bid_qty += upbitws.orderbook[upbitws.codeindex['KRW-BTC']].units[i].bid_size
-                    if krw_bid_qty * krw_bid > krw_limit:
-                        break
-                for i in range(10):
-                    usd_ask = upbitws.orderbook[upbitws.codeindex['USDT-BTC']].units[i].ask_price
-                    usd_ask_qty += upbitws.orderbook[upbitws.codeindex['USDT-BTC']].units[i].ask_size
-                    if usd_ask_qty * usd_ask > usd_limit:
-                        break
-                for i in range(10):
-                    usd_bid = upbitws.orderbook[upbitws.codeindex['USDT-BTC']].units[i].bid_price
-                    usd_bid_qty += upbitws.orderbook[upbitws.codeindex['USDT-BTC']].units[i].bid_size
-                    if usd_bid_qty * usd_bid > usd_limit:
-                        break              
-                    upbitws.data_flag = False
-                update_flag = True
-            upbitws.lock_a.release()
-            upbitws.lock_b.release()
-            
-            #timestamp 차이 10초 미만, 김프 계산식에 사용할 변수들 0이 아닌 경우 진행
-            if update_flag:
-                if time.time() - krw_timestamp - usd_timestamp < 10 and usd_bid > 0.0 and usd_ask > 0.0 and krw_ask > 0.0 and krw_bid > 0.0 and tb.exchange_rate > 0.0:
-                    tb.KRW2USD = (krw_ask - usd_bid * tb.exchange_rate)/(usd_bid * tb.exchange_rate) * 100
-                    tb.USD2KRW = (krw_bid - usd_ask * tb.exchange_rate)/(usd_ask * tb.exchange_rate) * 100
-                    
-                    '''
-                    if KRW2USD < KRW2USD_limit: #역프 설정된 값보다 작은 경우, 실행
-                        logging.info('KRW2USD')
-                    elif USD2KRW > USD2KRW_limit: #김프 설정된 값보다 큰 경우, 실행
-                        logging.info('USD2KRW')
-                    '''
-              
-                else:
-                    logging.info('Error %d %d %d %f %f %f %f %f'% (time.time() * 2000 - krw_timestamp - usd_timestamp, krw_timestamp,usd_timestamp, usd_bid, usd_ask, krw_ask, krw_bid, tb.exchange_rate))
-      
+    tb.loop(upbitws)
 
     for t in threading.enumerate():
         if t is not main_thread:
