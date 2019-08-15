@@ -89,14 +89,26 @@ class Tradingbot():
     def worker_logger(self):
         db = sqlite3.connect(db_filename, detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
         cursor = db.cursor()
-        cursor.execute('''CREATE TABLE IF NOT EXISTS coin_premium(date timestamp, KRW2USD FLOAT, USD2KRW FLOAT, KRW_ASK FLOAT, KRW_BID FLOAT, USD_ASK FLOAT, USD_BID FLOAT, EXCHANGE_RATE FLOAT)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS coin_premium(date timestamp, KRW2USD FLOAT, USD2KRW FLOAT, KRW_ASK FLOAT, KRW_BID FLOAT, USD_ASK FLOAT, USD_BID FLOAT, EXCHANGE_RATE FLOAT, KRW2USD_weight FLOAT, USD2KRW_weight FLOAT, balance_krw FLOAT, balance_usd FLOAT, balance_btc FLOAT)''')
+        
+        db_patch = []
+        # db_patch.append("ALTER TABLE coin_premium ADD column KRW2USD_weight FLOAT")
+        # db_patch.append("ALTER TABLE coin_premium ADD column USD2KRW_weight FLOAT")
+        # db_patch.append("ALTER TABLE coin_premium ADD column balance_krw FLOAT")
+        # db_patch.append("ALTER TABLE coin_premium ADD column balance_usd FLOAT")
+        for q in db_patch:
+            try:
+                cursor.execute(q)
+            except:
+                print('Failed to add a column')
         db.commit()
+
         while True:        
             text = '%.3f, %.3f, %d, %d, %f, %f, %.2f' % (self.KRW2USD, self.USD2KRW, self.krw_ask, self.krw_bid, self.usd_ask, self.usd_bid, self.exchange_rate)
             logging.info(text)
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     
-            cursor.execute('''INSERT INTO coin_premium(date, KRW2USD, USD2KRW, KRW_ASK, KRW_BID, USD_ASK, USD_BID, EXCHANGE_RATE) VALUES(?,?,?,?,?,?,?,?)''', (now,self.KRW2USD, self.USD2KRW, self.krw_ask, self.krw_bid, self.usd_ask, self.usd_bid, self.exchange_rate))
+            cursor.execute('''INSERT INTO coin_premium(date, KRW2USD, USD2KRW, KRW_ASK, KRW_BID, USD_ASK, USD_BID, EXCHANGE_RATE, KRW2USD_weight, USD2KRW_weight, balance_krw, balance_usd, balance_btc) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''', (now,self.KRW2USD, self.USD2KRW, self.krw_ask, self.krw_bid, self.usd_ask, self.usd_bid, self.exchange_rate,self.KRW2USD_weighted, self.USD2KRW_weighted, self.balance['KRW'], self.balance['USDT'],self.balance['BTC']))
             db.commit()
             time.sleep(1)
             
