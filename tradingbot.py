@@ -23,8 +23,8 @@ class Tradingbot():
     balance['ETH'] = 0.0
 
     exchange_rate = 0.0
-    KRW2USD_limit = -3.0 #역프 때 이득
-    USD2KRW_limit = 0.0 #김프 때 이득
+    KRW2USD_limit = -2.0 #역프 때 이득
+    USD2KRW_limit = 1.0 #김프 때 이득
     KRW2USD = 0.0
     USD2KRW = 0.0
 
@@ -42,20 +42,36 @@ class Tradingbot():
     krw_timestamp = 0.0
     usd_timestamp = 0.0
 
+    cross_order_unit = 0.0005
+    btc_stop_unit = 0.005
+
+    order_flag = False
+
     def __init__(self, key, secret):
         self.KEY = key
         self.SECRET = secret
 
         
-    def worker_exchange_rate(self):
+    def worker_get_info(self):
         while True:
             if self.exchange_rate == 0.0:
                 time.sleep(10)
             else:
                 time.sleep(60)
+            #TODO : Lock before get information
             self.get_real_currency()
-            #logging.info('exchange rate was updated %.2f'%self.exchange_rate)
-    
+            self.get_accounts()
+            
+    def worker_cooldown(self):        
+        if self.order_flag == False:
+            time.sleep(10)
+            self.order_flag = True
+        time.sleep(1)
+
+    def cooldown_order(self):
+        self.order_flag = False
+        threading.Thread(target=self.worker_cooldown)
+
     def worker_logger(self):
         while True:        
             text = '%.3f, %.3f, %d, %d, %f, %f, %.2f' % (self.KRW2USD, self.USD2KRW, self.krw_ask, self.krw_bid, self.usd_ask, self.usd_bid, self.exchange_rate)
@@ -119,12 +135,50 @@ class Tradingbot():
                         self.KRW2USD = (self.krw_ask - self.usd_bid * self.exchange_rate)/(self.usd_bid * self.exchange_rate) * 100
                         self.USD2KRW = (self.krw_bid - self.usd_ask * self.exchange_rate)/(self.usd_ask * self.exchange_rate) * 100
                         
+                        
+                        if self.balance['BTC'] > self.cross_order_unit and self.order_flag and self.balance['BTC'] < self.btc_stop_unit:
+                            if self.KRW2USD < self.KRW2USD_limit and self.balance['KRW'] > self.cross_order_unit*self.krw_ask*1.1 : 
+                                #역프 설정된 값보다 작은 경우, 실행
+                                #KRW2USD, KRW-BTC:매수;bid , USDT-BTC:매도;ask
+                                t1 = threading.Thread(target=self.order,args=('KRW-BTC','bid', self.market_price(self.krw_ask, 1.1), self.cross_order_unit))
+                                t2 = threading.Thread(target=self.order,args=('USDT-BTC','ask', self.market_price(self.usd_bid, 0.9), self.cross_order_unit))
+                                t1.start()
+                                t2.start()
+                                t1.join()
+                                t2.join()
+                                self.cooldown_order()
+                                logging.info('KRW2USD!!')                               
+                                    
+                            elif self.USD2KRW > self.USD2KRW_limit and self.balance['USDT'] > self.cross_order_unit*self.usd_ask*1.1 : 
+                                #김프 설정된 값보다 큰 경우, 실행
+                                #USD2KRW, KRW-BTC:매도 , USDT-BTC:매수
+                                t1 = threading.Thread(target=self.order,args=('KRW-BTC','ask', self.market_price(self.krw_bid, 0.9), self.cross_order_unit))
+                                t2 = threading.Thread(target=self.order,args=('USDT-BTC','bid', self.market_price(self.usd_ask, 1.1), self.cross_order_unit))
+                                t1.start()
+                                t2.start()
+                                t1.join()
+                                t2.join()
+                                self.cooldown_order()
+                                logging.info('USD2KRW')
+                        elif self.balance['BTC'] < self.cross_order_unit and self.order_flag and self.balance['BTC'] < self.btc_stop_unit:
+                            #buy cross_order_unit to prepare
+                            if self.balance['KRW'] > self.cross_order_unit*self.krw_ask: #원화부터 소모 수수료가 싸니까
+                                self.order('KRW-BTC','bid', self.market_price(self.krw_ask, 1.1), self.cross_order_unit)
+                                self.cooldown_order()
+                                #self.get_accounts()
+
+                            logging.info('Buy a cross order unit of BTC')
+                        
+                        # Cross-order using thread (twice better than sequential)                        
                         '''
-                        if KRW2USD < KRW2USD_limit: #역프 설정된 값보다 작은 경우, 실행
-                            logging.info('KRW2USD')
-                        elif USD2KRW > USD2KRW_limit: #김프 설정된 값보다 큰 경우, 실행
-                            logging.info('USD2KRW')
+                        t1 = threading.Thread(target=self.get_accounts)
+                        t2 = threading.Thread(target=self.get_accounts)
+                        t1.start()
+                        t2.start()
+                        t1.join()
+                        t2.join()
                         '''
+
                         time.sleep(0.1)
                     else:
                         logging.info('Error %d %d %d %f %f %f %f %f'% (time.time() * 2000 - self.krw_timestamp - self.usd_timestamp, self.krw_timestamp,self.usd_timestamp, self.usd_bid, self.usd_ask, self.krw_ask, self.krw_bid, self.exchange_rate))
@@ -134,8 +188,8 @@ class Tradingbot():
         upbit = Upbitpy(self.KEY, self.SECRET)
         ret = upbit.get_accounts()
         for c in ret:
-            self.balance[c['currency']] = c['balance' ]
-        logging.info(self.balance)
+            self.balance[c['currency']] = float(c['balance' ])
+        #logging.info(self.balance)
 
 
     def get_chance(self, code):
@@ -143,13 +197,29 @@ class Tradingbot():
         ret = upbit.get_chance(code)
         logging.info(ret)
 
-
+ 
     def order(self, code, dir, price, qty):
         upbit = Upbitpy(self.KEY, self.SECRET)
-        ret = upbit.order(code, dir, qty, price) #e.g. ('KRW-XRP', 'bid', 10, 300)
+        ret = upbit.order(code, dir, qty, price) #e.g. ('KRW-BTC', 'bid', 10, 300)
         logging.info(ret)
         
+    def market_price(self, number, weight):      #only if price is greater than 100
+        count = self.digit_count(number)
+        number = number * weight
+        
+        for t in range(count - 3):
+            number = number /10
+        number = int(number)
+        for t in range(count - 3):
+            number = number * 10
+        return number
 
+    def digit_count(self, number):
+        count = 0
+        while(number > 0):
+            number = number // 10
+            count = count + 1
+        return count
 
     def test_get_orders(self):
         upbit = Upbitpy(self.KEY, self.SECRET)
@@ -210,7 +280,7 @@ if __name__ == '__main__':
     t1 = threading.Thread(target=worker_get_orderbook, args=(upbitws,))
     t1.start()
 
-    t2 = threading.Thread(target=tb.worker_exchange_rate)
+    t2 = threading.Thread(target=tb.worker_get_info)
     t2.start()
 
     t3 = threading.Thread(target=tb.worker_logger)
@@ -218,6 +288,7 @@ if __name__ == '__main__':
 
     main_thread = threading.currentThread()
 
+    tb.order_flag = True
     tb.loop(upbitws)
 
     for t in threading.enumerate():
@@ -225,10 +296,6 @@ if __name__ == '__main__':
             t.join()
     #tb.get_chance('KRW-BTC')
     #tb.order('USDT-BTC','bid', 11500, 0.0003) #매수
-    #tb.order('KRW-BTC','ask', 13000000, 0.0003) #매도
-    #tb.order('KRW-BTC','bid', 14000000, 0.0002) #매수
+    #tb.order('KRW-BTC','ask', 13000000, 0.0005) #매도
+    #tb.order('KRW-BTC','bid', 14000000, 0.0005) #매수
    # tb.get_chance('KRW-BTC')
-
-
-    # 기본 테스트 환경: xrp, 10원에 100개 구매 (구매 요청 후 취소)
-    
