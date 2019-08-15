@@ -23,12 +23,12 @@ class Tradingbot():
     balance['ETH'] = 0.0
 
     exchange_rate = 0.0
-    KRW2USD_limit = -3.0 #역프 때 이득 
-    KRW2USD_offset = 0.5   
-    KRW2USD_weighted = KRW2USD_limit
+    KRW2USD_limit = -4.5 #역프 때 이득 
+    KRW2USD_offset = 1.5   
+    KRW2USD_weighted = KRW2USD_limit + KRW2USD_offset
 
-    USD2KRW_limit = 3.0 #김프 때 이득
-    USD2KRW_offset = 0.5
+    USD2KRW_limit = 5.0 #김프 때 이득
+    USD2KRW_offset = -1.0
     USD2KRW_weighted = USD2KRW_limit + USD2KRW_offset
     
     weight_offset = 0.0
@@ -50,7 +50,7 @@ class Tradingbot():
     krw_timestamp = 0.0
     usd_timestamp = 0.0
 
-    cross_order_unit = 0.0005
+    cross_order_unit = 0.001
     btc_stop_unit = 0.005
 
     order_flag = False
