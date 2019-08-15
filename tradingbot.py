@@ -23,8 +23,16 @@ class Tradingbot():
     balance['ETH'] = 0.0
 
     exchange_rate = 0.0
-    KRW2USD_limit = -2.0 #역프 때 이득
-    USD2KRW_limit = 1.0 #김프 때 이득
+    KRW2USD_limit = -3.0 #역프 때 이득 
+    KRW2USD_offset = 0.5   
+    KRW2USD_weighted = KRW2USD_limit
+
+    USD2KRW_limit = 3.0 #김프 때 이득
+    USD2KRW_offset = 0.5
+    USD2KRW_weighted = USD2KRW_limit + USD2KRW_offset
+    
+    weight_offset = 0.0
+
     KRW2USD = 0.0
     USD2KRW = 0.0
 
@@ -64,7 +72,7 @@ class Tradingbot():
             
     def worker_cooldown(self):        
         if self.order_flag == False:
-            time.sleep(10)
+            time.sleep(5)
             self.get_accounts()
             self.order_flag = True
         time.sleep(1)
@@ -138,7 +146,7 @@ class Tradingbot():
                         
                         
                         if self.balance['BTC'] > self.cross_order_unit and self.order_flag and self.balance['BTC'] < self.btc_stop_unit:
-                            if self.KRW2USD < self.KRW2USD_limit and self.balance['KRW'] > self.cross_order_unit*self.krw_ask*1.1 : 
+                            if self.KRW2USD < self.KRW2USD_weighted and self.balance['KRW'] > self.cross_order_unit*self.krw_ask*1.1 : 
                                 #역프 설정된 값보다 작은 경우, 실행
                                 #KRW2USD, KRW-BTC:매수;bid , USDT-BTC:매도;ask
                                 t1 = threading.Thread(target=self.order,args=('KRW-BTC','bid', self.market_price(self.krw_ask, 1.1), self.cross_order_unit))
@@ -150,7 +158,7 @@ class Tradingbot():
                                 self.cooldown_order()
                                 logging.info('KRW2USD!!')                               
                                     
-                            elif self.USD2KRW > self.USD2KRW_limit and self.balance['USDT'] > self.cross_order_unit*self.usd_ask*1.1 : 
+                            elif self.USD2KRW > self.USD2KRW_weighted and self.balance['USDT'] > self.cross_order_unit*self.usd_ask*1.1 : 
                                 #김프 설정된 값보다 큰 경우, 실행
                                 #USD2KRW, KRW-BTC:매도 , USDT-BTC:매수
                                 t1 = threading.Thread(target=self.order,args=('KRW-BTC','ask', self.market_price(self.krw_bid, 0.9), self.cross_order_unit))
@@ -189,8 +197,22 @@ class Tradingbot():
         upbit = Upbitpy(self.KEY, self.SECRET)
         ret = upbit.get_accounts()
         for c in ret:
-            self.balance[c['currency']] = float(c['balance' ])
-        #logging.info(self.balance)
+            self.balance[c['currency']] = float(c['balance'])
+        
+        if (self.balance['KRW'] > 0.0 or self.balance['USDT']  > 0.0) and self.exchange_rate > 0.0:
+            #보유자산에 따른 KRW2USD_limit and USD2KRW_limt 가중치 부여            
+            self.KRW2USD_weighted = self.KRW2USD_limit - self.KRW2USD_limit*self.balance['KRW']/(self.balance['KRW'] + self.balance['USDT']*self.exchange_rate)           
+            self.USD2KRW_weighted = self.USD2KRW_limit - self.USD2KRW_limit*self.balance['USDT']*self.exchange_rate/(self.balance['KRW'] + self.balance['USDT']*self.exchange_rate)
+            if self.KRW2USD_weighted >= self.KRW2USD_limit and self.KRW2USD_weighted <= self.USD2KRW_limit:
+                self.KRW2USD_weighted = self.KRW2USD_weighted + self.KRW2USD_offset
+            else:
+                self.KRW2USD_weighted = self.KRW2USD_limit                
+            if self.USD2KRW_weighted >= self.KRW2USD_limit and self.USD2KRW_weighted <= self.USD2KRW_limit:
+                self.USD2KRW_weighted = self.USD2KRW_weighted + self.USD2KRW_offset
+            else:
+                self.USD2KRW_weighted = self.USD2KRW_limit
+            
+        logging.info('Weight %.2f %.2f'%(self.KRW2USD_weighted, self.USD2KRW_weighted))
 
 
     def get_chance(self, code):
@@ -271,9 +293,10 @@ if __name__ == '__main__':
         logging.basicConfig(format='%(asctime)s, %(message)s', level=logging.INFO, datefmt='20%y-%m-%d %H:%M:%S')
     
     
-    tb = Tradingbot(mykey.ACCESS_KEY, mykey.SECRET_KEY)
-    tb.get_accounts()
+    tb = Tradingbot(mykey.ACCESS_KEY, mykey.SECRET_KEY)    
+    #get exchange rate and then get accounts!!! for weight
     tb.get_real_currency()
+    tb.get_accounts()
     
 
     upbitws = upbitwspy.UpbitWebsocket()
