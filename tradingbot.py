@@ -8,6 +8,10 @@ import requests #for real currency rate
 import json #for real currency rate
 import logging
 import platform
+import sqlite3
+import datetime
+
+db_filename = 'test.db'
 
 class Tradingbot():
     KEY = ''
@@ -83,11 +87,19 @@ class Tradingbot():
         t.start()
 
     def worker_logger(self):
+        db = sqlite3.connect(db_filename, detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
+        cursor = db.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS coin_premium(date timestamp, KRW2USD FLOAT, USD2KRW FLOAT, KRW_ASK FLOAT, KRW_BID FLOAT, USD_ASK FLOAT, USD_BID FLOAT, EXCHANGE_RATE FLOAT)''')
+        db.commit()
         while True:        
             text = '%.3f, %.3f, %d, %d, %f, %f, %.2f' % (self.KRW2USD, self.USD2KRW, self.krw_ask, self.krw_bid, self.usd_ask, self.usd_bid, self.exchange_rate)
             logging.info(text)
-            #logging.info('%d %d %d %f %f %f %f %f'% (time.time() * 2000 - self.krw_timestamp - self.usd_timestamp, self.krw_timestamp,self.usd_timestamp, self.usd_bid, self.usd_ask, self.krw_ask, self.krw_bid, self.exchange_rate))
+            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    
+            cursor.execute('''INSERT INTO coin_premium(date, KRW2USD, USD2KRW, KRW_ASK, KRW_BID, USD_ASK, USD_BID, EXCHANGE_RATE) VALUES(?,?,?,?,?,?,?,?)''', (now,self.KRW2USD, self.USD2KRW, self.krw_ask, self.krw_bid, self.usd_ask, self.usd_bid, self.exchange_rate))
+            db.commit()
             time.sleep(1)
+            
             #time.sleep(1)
     
     def get_real_currency(self):
