@@ -65,6 +65,7 @@ class Tradingbot():
     def worker_cooldown(self):        
         if self.order_flag == False:
             time.sleep(10)
+            self.get_accounts()
             self.order_flag = True
         time.sleep(1)
 
