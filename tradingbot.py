@@ -79,7 +79,8 @@ class Tradingbot():
 
     def cooldown_order(self):
         self.order_flag = False
-        threading.Thread(target=self.worker_cooldown)
+        t = threading.Thread(target=self.worker_cooldown)
+        t.start()
 
     def worker_logger(self):
         while True:        
