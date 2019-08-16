@@ -172,22 +172,22 @@ class Tradingbot():
                     for i in range(10):
                         self.krw_ask = upbitws.orderbook[upbitws.codeindex['KRW-BTC']].units[i].ask_price
                         self.krw_ask_qty += upbitws.orderbook[upbitws.codeindex['KRW-BTC']].units[i].ask_size
-                        if self.krw_ask_qty * self.krw_ask > self.krw_limit:
+                        if self.krw_ask_qty > self.cross_order_unit * 2:
                             break
                     for i in range(10):
                         self.krw_bid = upbitws.orderbook[upbitws.codeindex['KRW-BTC']].units[i].bid_price
                         self.krw_bid_qty += upbitws.orderbook[upbitws.codeindex['KRW-BTC']].units[i].bid_size
-                        if self.krw_bid_qty * self.krw_bid > self.krw_limit:
+                        if self.krw_bid_qty > self.cross_order_unit * 2:
                             break
                     for i in range(10):
                         self.usd_ask = upbitws.orderbook[upbitws.codeindex['USDT-BTC']].units[i].ask_price
                         self.usd_ask_qty += upbitws.orderbook[upbitws.codeindex['USDT-BTC']].units[i].ask_size
-                        if self.usd_ask_qty * self.usd_ask > self.usd_limit:
+                        if self.usd_ask_qty > self.cross_order_unit * 2:
                             break
                     for i in range(10):
                         self.usd_bid = upbitws.orderbook[upbitws.codeindex['USDT-BTC']].units[i].bid_price
                         self.usd_bid_qty += upbitws.orderbook[upbitws.codeindex['USDT-BTC']].units[i].bid_size
-                        if self.usd_bid_qty * self.usd_bid > self.usd_limit:
+                        if self.usd_bid_qty > self.cross_order_unit * 2:
                             break              
                         upbitws.data_flag = False
                     update_flag = True                
