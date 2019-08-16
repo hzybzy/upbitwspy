@@ -48,14 +48,14 @@ class Tradingbot():
     usd_bid = 0.0
     usd_ask_qty = 0.0
     usd_bid_qty = 0.0
-    krw_limit = 50000
+    krw_limit = 60000
     usd_limit = 0.0
     
     krw_timestamp = 0.0
     usd_timestamp = 0.0
 
-    cross_order_unit = 0.001
-    btc_stop_unit = 0.005
+    cross_order_unit = 0.005
+    btc_stop_unit = 0.01
 
     order_flag = False
 
@@ -124,7 +124,38 @@ class Tradingbot():
         #TODO : tracking date "date":"2019-08-09","time":"20:01:00"
         self.exchange_rate = ret[0]['basePrice']
         logging.info('exchange rate was updated %.2f'%tb.exchange_rate)
-        
+    
+    def rate_limit(self):
+        rate = 100* (self.balance['KRW'])/(self.balance['KRW']+self.balance['USDT']*self.exchange_rate)
+        if rate > 95:
+            return 3.0, 4.0
+        elif rate > 90:
+            return 2.0, 4.0
+        elif rate > 85:
+            return 2.0, 3.0
+        elif rate > 80:
+            return 1.0, 3.0
+        elif rate > 70:
+            return 1.0, 2.0
+        elif rate > 60:
+            return 0.0, 2.0
+        elif rate > 50:
+            return 0.0, 1.2
+        elif rate > 45:
+            return 0.0, 1.0
+        elif rate > 30:
+            return -1.0, 1.0
+        elif rate > 20:
+            return -1.0, 0.0
+        elif rate > 15:
+            return -2.0, 0.0
+        elif rate > 10:
+            return -2.0, -1.0
+        elif rate > 5:
+            return -3.0, -1.0
+        else:
+            return -3.0, -2.0
+
     def loop(self, upbitws):
         while True:
             if upbitws.codeindex:             
@@ -171,7 +202,7 @@ class Tradingbot():
                         
                         
                         if self.balance['BTC'] > self.cross_order_unit and self.order_flag and self.balance['BTC'] < self.btc_stop_unit:
-                            if self.KRW2USD < self.KRW2USD_weighted and self.balance['KRW'] > self.cross_order_unit*self.krw_ask*1.1 : 
+                            if self.KRW2USD < self.KRW2USD_weighted and self.balance['KRW'] > self.cross_order_unit*self.krw_ask * 1.1 : 
                                 #역프 설정된 값보다 작은 경우, 실행
                                 #KRW2USD, KRW-BTC:매수;bid , USDT-BTC:매도;ask
                                 t1 = threading.Thread(target=self.order,args=('KRW-BTC','bid', self.market_price(self.krw_ask, 1.1), self.cross_order_unit))
@@ -183,7 +214,7 @@ class Tradingbot():
                                 self.cooldown_order()
                                 logging.info('KRW2USD!!')                               
                                     
-                            elif self.USD2KRW > self.USD2KRW_weighted and self.balance['USDT'] > self.cross_order_unit*self.usd_ask*1.1 : 
+                            elif self.USD2KRW > self.USD2KRW_weighted and self.balance['USDT'] > self.cross_order_unit*self.usd_ask * 1.1 : 
                                 #김프 설정된 값보다 큰 경우, 실행
                                 #USD2KRW, KRW-BTC:매도 , USDT-BTC:매수
                                 t1 = threading.Thread(target=self.order,args=('KRW-BTC','ask', self.market_price(self.krw_bid, 0.9), self.cross_order_unit))
@@ -196,10 +227,13 @@ class Tradingbot():
                                 logging.info('USD2KRW')
                         elif self.balance['BTC'] < self.cross_order_unit and self.order_flag and self.balance['BTC'] < self.btc_stop_unit:
                             #buy cross_order_unit to prepare
-                            if self.balance['KRW'] > self.cross_order_unit*self.krw_ask: #원화부터 소모 수수료가 싸니까
+                            if self.balance['KRW'] > self.cross_order_unit*self.krw_ask*1.1: #원화부터 소모 수수료가 싸니까
                                 self.order('KRW-BTC','bid', self.market_price(self.krw_ask, 1.1), self.cross_order_unit)
                                 self.cooldown_order()
                                 #self.get_accounts()
+                            elif self.balance['USDT'] > self.cross_order_unit*self.usd_ask*1.1:
+                                self.order('USDT-BTC','bid', self.market_price(self.usd_ask, 1.1), self.cross_order_unit)
+                                self.cooldown_order()
 
                             logging.info('Buy a cross order unit of BTC')
                         
@@ -225,18 +259,20 @@ class Tradingbot():
             self.balance[c['currency']] = float(c['balance'])
         
         if (self.balance['KRW'] > 0.0 or self.balance['USDT']  > 0.0) and self.exchange_rate > 0.0:
-            #보유자산에 따른 KRW2USD_limit and USD2KRW_limt 가중치 부여            
-            self.KRW2USD_weighted = self.KRW2USD_limit - self.KRW2USD_limit*self.balance['KRW']/(self.balance['KRW'] + self.balance['USDT']*self.exchange_rate)           
-            self.USD2KRW_weighted = self.USD2KRW_limit - self.USD2KRW_limit*self.balance['USDT']*self.exchange_rate/(self.balance['KRW'] + self.balance['USDT']*self.exchange_rate)
-            if self.KRW2USD_weighted >= self.KRW2USD_limit and self.KRW2USD_weighted <= self.USD2KRW_limit:
-                self.KRW2USD_weighted = self.KRW2USD_weighted + self.KRW2USD_offset
-            else:
-                self.KRW2USD_weighted = self.KRW2USD_limit                
-            if self.USD2KRW_weighted >= self.KRW2USD_limit and self.USD2KRW_weighted <= self.USD2KRW_limit:
-                self.USD2KRW_weighted = self.USD2KRW_weighted + self.USD2KRW_offset
-            else:
-                self.USD2KRW_weighted = self.USD2KRW_limit
-            
+            #보유자산에 따른 KRW2USD_limit and USD2KRW_limt 가중치 부여 점진법
+            # self.KRW2USD_weighted = self.KRW2USD_limit - self.KRW2USD_limit*self.balance['KRW']/(self.balance['KRW'] + self.balance['USDT']*self.exchange_rate)           
+            # self.USD2KRW_weighted = self.USD2KRW_limit - self.USD2KRW_limit*self.balance['USDT']*self.exchange_rate/(self.balance['KRW'] + self.balance['USDT']*self.exchange_rate)
+            # if self.KRW2USD_weighted >= self.KRW2USD_limit and self.KRW2USD_weighted <= self.USD2KRW_limit:
+            #     self.KRW2USD_weighted = self.KRW2USD_weighted + self.KRW2USD_offset
+            # else:
+            #     self.KRW2USD_weighted = self.KRW2USD_limit                
+            # if self.USD2KRW_weighted >= self.KRW2USD_limit and self.USD2KRW_weighted <= self.USD2KRW_limit:
+            #     self.USD2KRW_weighted = self.USD2KRW_weighted + self.USD2KRW_offset
+            # else:
+            #     self.USD2KRW_weighted = self.USD2KRW_limit
+            #보유자산에 따른 KRW2USD_limit and USD2KRW_limt 가중치 부여 계단법
+            self.KRW2USD_weighted, self.USD2KRW_weighted = self.rate_limit()
+
         logging.info('Weight %.2f %.2f'%(self.KRW2USD_weighted, self.USD2KRW_weighted))
 
 
