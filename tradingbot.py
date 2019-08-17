@@ -103,13 +103,13 @@ class Tradingbot():
                 print('Failed to add a column')
         db.commit()
 
-        while True:        
+        while True:       
             text = '%.3f, %.3f, %d, %d, %f, %f, %.2f' % (self.KRW2USD, self.USD2KRW, self.krw_ask, self.krw_bid, self.usd_ask, self.usd_bid, self.exchange_rate)
             logging.info(text)
-            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    
-            cursor.execute('''INSERT INTO coin_premium(date, KRW2USD, USD2KRW, KRW_ASK, KRW_BID, USD_ASK, USD_BID, EXCHANGE_RATE, KRW2USD_weight, USD2KRW_weight, balance_krw, balance_usd, balance_btc) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''', (now,self.KRW2USD, self.USD2KRW, self.krw_ask, self.krw_bid, self.usd_ask, self.usd_bid, self.exchange_rate,self.KRW2USD_weighted, self.USD2KRW_weighted, self.balance['KRW'], self.balance['USDT'],self.balance['BTC']))
-            db.commit()
+            if self.krw_ask > 0.0 and self.usd_ask > 0.0 and self.exchange_rate > 0.0:                 
+                now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")            
+                cursor.execute('''INSERT INTO coin_premium(date, KRW2USD, USD2KRW, KRW_ASK, KRW_BID, USD_ASK, USD_BID, EXCHANGE_RATE, KRW2USD_weight, USD2KRW_weight, balance_krw, balance_usd, balance_btc) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''', (now,self.KRW2USD, self.USD2KRW, self.krw_ask, self.krw_bid, self.usd_ask, self.usd_bid, self.exchange_rate,self.KRW2USD_weighted, self.USD2KRW_weighted, self.balance['KRW'], self.balance['USDT'],self.balance['BTC']))
+                db.commit()
             time.sleep(1)
             
             #time.sleep(1)
