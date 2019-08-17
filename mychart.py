@@ -11,8 +11,7 @@ import sqlite3
 
 app = dash.Dash(__name__)
 
-app.layout = html.Div([
-    html.Div([html.H1("Tesla Stock Price")], style={'textAlign': "center"}),
+app.layout = html.Div([    
     dcc.Graph(id="my-graph1"),
     dcc.Graph(id="my-graph2"),
     html.Button(id='submit-button', n_clicks=0, children='update')
