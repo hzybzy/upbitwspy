@@ -2,3 +2,4 @@
 *.pyc
 mykey.py
 *.log
+*.db
