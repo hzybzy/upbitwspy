@@ -12,11 +12,11 @@ import sqlite3
 app = dash.Dash(__name__)
 
 app.layout = html.Div([    
+    html.Button(id='submit-button', n_clicks=0, children='update'),
     dcc.Graph(id="my-graph1"),
     dcc.Graph(id="my-graph2"),
     dcc.Graph(id="my-graph3"),
-    dcc.Graph(id="my-graph4"),
-    html.Button(id='submit-button', n_clicks=0, children='update')
+    dcc.Graph(id="my-graph4")    
     #dcc.Interval(id='graph_update', interval=5000)
 ], className="container")
 
