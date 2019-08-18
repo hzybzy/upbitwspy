@@ -8,11 +8,18 @@ import plotly.graph_objs as go
 from dash.dependencies import Input, Output
 #from app import app
 import sqlite3
+import datetime
 
 app = dash.Dash(__name__)
 
 app.layout = html.Div([    
     html.Button(id='submit-button', n_clicks=0, children='update'),
+    dcc.RadioItems(
+                id='period',
+                options=[{'label': i, 'value': i} for i in ['day', 'weak', 'month', '6month', 'year', 'all']],
+                value='day',
+                labelStyle={'display': 'inline-block'}
+            ),
     dcc.Graph(id="my-graph1"),
     dcc.Graph(id="my-graph2"),
     dcc.Graph(id="my-graph3"),
@@ -25,11 +32,17 @@ app.layout = html.Div([
     Output("my-graph2", 'figure'),
     Output("my-graph3", 'figure'),
     Output("my-graph4", 'figure')],
-    [Input('submit-button', 'n_clicks')])
-def graph_update(n_clicks):
-    print(n_clicks)
+    [Input('submit-button', 'n_clicks'),
+    Input('period', 'value')])
+def graph_update(n_clicks, period):
+
     con = sqlite3.connect('mybot.db')
-    data=pd.read_sql_query("SELECT * FROM upbit_premium",con)
+    if period == 'day':
+        now = datetime.datetime.now() - datetime.timedelta(days=1)
+        text = "SELECT * FROM upbit_premium WHERE date > '%s'"%now
+        data=pd.read_sql_query(text,con)
+    else:
+        data=pd.read_sql_query("SELECT * FROM upbit_premium",con)
     data = data.set_index(pd.DatetimeIndex(data['date']))
     df1 = data['KRW2USD'].resample('5Min').ohlc()
     df2 = data['USD2KRW'].resample('5Min').ohlc()
