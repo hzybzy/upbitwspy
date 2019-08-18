@@ -15,6 +15,7 @@ class Ticker:
     trade_volume = 0.0
     trade_timestamp = 0
     timestamp = 0 
+    
     def print_data(self):
         print(self.code)
 
@@ -41,6 +42,7 @@ class UpbitWebsocket():
         self.orderbook = []#Orderbook()
         self.codeindex = {}
         self.data_flag = False
+        self.last_code = ''
 
     def set_type(self, data_type, codes):
         if data_type == 'orderbook':
@@ -93,9 +95,9 @@ class UpbitWebsocket():
                         self.ticker.trade_timestamp = ret['trade_timestamp']
                         self.ticker.timestamp = ret['timestamp']
                         
-                    elif(ret['type'] == 'orderbook'): 
+                    elif(ret['type'] == 'orderbook'):                         
                         self.data_flag = True
-                        #self.orderbook[self.codeindex[ret['code']]].timestamp = ret['timestamp']
+                        self.last_code = ret['code']
                         self.orderbook[self.codeindex[ret['code']]].timestamp = time.time()
                         self.orderbook[self.codeindex[ret['code']]].units.clear()
                         for i in range(10):
