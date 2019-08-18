@@ -338,6 +338,7 @@ class Tradingbot():
                         time.sleep(0.1)
                     else:
                         logging.info('Error %d %d %d %f %f %f %f %f'% (time.time() * 2000 - self.mybook['KRW-BTC'].timestamp - self.mybook['USDT-BTC'].timestamp, self.mybook['KRW-BTC'].timestamp,self.mybook['USDT-BTC'].timestamp, self.mybook['USDT-BTC'].bid, self.mybook['USDT-BTC'].ask, self.mybook['KRW-BTC'].ask, self.mybook['KRW-BTC'].bid, self.exchange_rate))
+            time.sleep(0.01)
           
 
     def get_accounts(self):
