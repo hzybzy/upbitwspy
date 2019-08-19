@@ -356,7 +356,7 @@ class Tradingbot():
                 self.KRW2USD_weighted = self.KRW2USD_weighted + self.KRW2USD_offset
             else:
                 self.KRW2USD_weighted = self.KRW2USD_limit                
-            if self.USD2KRW_weighted <= self.USD2KRW_limit and self.USD2KRW_weighted <= self.USD2KRW_limit:
+            if self.USD2KRW_weighted >= self.KRW2USD_limit and self.USD2KRW_weighted <= self.USD2KRW_limit:
                 self.USD2KRW_weighted = self.USD2KRW_weighted + self.USD2KRW_offset
             else:
                 self.USD2KRW_weighted = self.USD2KRW_limit
