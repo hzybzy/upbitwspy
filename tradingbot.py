@@ -36,13 +36,14 @@ class Tradingbot():
     exchange_rate = 0.0
     
     KRW2USD_limit = -3.0 #역프 때 이득 
-    KRW2USD_offset = 1.3   
+    KRW2USD_offset = 1.0
     KRW2USD_weighted = KRW2USD_limit + KRW2USD_offset
 
     USD2KRW_limit = 3.0 #김프 때 이득
     USD2KRW_offset = -1.0
     USD2KRW_weighted = USD2KRW_limit + USD2KRW_offset
-    
+    USD2KRW_restrict = 1.0
+
     weight_offset = 0.0
 
     KRW2USD = 0.0
@@ -338,7 +339,7 @@ class Tradingbot():
                         time.sleep(0.1)
                     else:
                         logging.info('Error %d %d %d %f %f %f %f %f'% (time.time() * 2000 - self.mybook['KRW-BTC'].timestamp - self.mybook['USDT-BTC'].timestamp, self.mybook['KRW-BTC'].timestamp,self.mybook['USDT-BTC'].timestamp, self.mybook['USDT-BTC'].bid, self.mybook['USDT-BTC'].ask, self.mybook['KRW-BTC'].ask, self.mybook['KRW-BTC'].bid, self.exchange_rate))
-            time.sleep(0.01)
+            time.sleep(0.001)
           
 
     def get_accounts(self):
@@ -349,18 +350,21 @@ class Tradingbot():
         
         if (self.balance['KRW'] > 0.0 or self.balance['USDT']  > 0.0) and self.exchange_rate > 0.0:
             # 보유자산에 따른 KRW2USD_limit and USD2KRW_limt 가중치 부여 점진법
-            # self.KRW2USD_weighted = self.KRW2USD_limit - self.KRW2USD_limit*self.balance['KRW']/(self.balance['KRW'] + self.balance['USDT']*self.exchange_rate)           
-            # self.USD2KRW_weighted = self.USD2KRW_limit - self.USD2KRW_limit*self.balance['USDT']*self.exchange_rate/(self.balance['KRW'] + self.balance['USDT']*self.exchange_rate)
-            # if self.KRW2USD_weighted >= self.KRW2USD_limit and self.KRW2USD_weighted <= self.USD2KRW_limit:
-            #     self.KRW2USD_weighted = self.KRW2USD_weighted + self.KRW2USD_offset
-            # else:
-            #     self.KRW2USD_weighted = self.KRW2USD_limit                
-            # if self.USD2KRW_weighted >= self.KRW2USD_limit and self.USD2KRW_weighted <= self.USD2KRW_limit:
-            #     self.USD2KRW_weighted = self.USD2KRW_weighted + self.USD2KRW_offset
-            # else:
-            #     self.USD2KRW_weighted = self.USD2KRW_limit
-            # 보유자산에 따른 KRW2USD_limit and USD2KRW_limt 가중치 부여 계단법
-            self.KRW2USD_weighted, self.USD2KRW_weighted = self.rate_limit()
+            self.KRW2USD_weighted = self.KRW2USD_limit - self.KRW2USD_limit*self.balance['KRW']/(self.balance['KRW'] + self.balance['USDT']*self.exchange_rate)           
+            self.USD2KRW_weighted = self.USD2KRW_limit - self.USD2KRW_limit*self.balance['USDT']*self.exchange_rate/(self.balance['KRW'] + self.balance['USDT']*self.exchange_rate)
+            if self.KRW2USD_weighted >= self.KRW2USD_limit and self.KRW2USD_weighted <= self.USD2KRW_limit:
+                self.KRW2USD_weighted = self.KRW2USD_weighted + self.KRW2USD_offset
+            else:
+                self.KRW2USD_weighted = self.KRW2USD_limit                
+            if self.USD2KRW_weighted <= self.USD2KRW_limit and self.USD2KRW_weighted <= self.USD2KRW_limit:
+                self.USD2KRW_weighted = self.USD2KRW_weighted + self.USD2KRW_offset
+            else:
+                self.USD2KRW_weighted = self.USD2KRW_limit
+
+            if self.USD2KRW_weighted < self.USD2KRW_restrict:
+                self.USD2KRW_weighted = self.USD2KRW_restrict
+            #보유자산에 따른 KRW2USD_limit and USD2KRW_limt 가중치 부여 계단법
+            #temp, self.USD2KRW_weighted = self.rate_limit()
 
         logging.info('Weight %.2f %.2f'%(self.KRW2USD_weighted, self.USD2KRW_weighted))
 
