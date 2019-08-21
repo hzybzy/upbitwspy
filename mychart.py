@@ -13,12 +13,15 @@ import datetime
 app = dash.Dash(__name__)
 
 app.layout = html.Div([    
-    html.Button(id='submit-button', n_clicks=0, children='update'),
+    html.Button(id='submit-button', n_clicks=0, children='update', style={
+        'width': '30%',
+        'font-size': '150%',
+        'height': '50%'}),
     dcc.RadioItems(
                 id='period',
                 options=[{'label': i, 'value': i} for i in ['day', 'weak', 'month', '6month', 'year', 'all']],
                 value='day',
-                labelStyle={'display': 'inline-block'}
+                labelStyle={'display': 'inline-block', 'font-size':'150%'}
             ),
     dcc.Graph(id="my-graph1"),
     dcc.Graph(id="my-graph2"),
