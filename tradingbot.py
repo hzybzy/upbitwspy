@@ -379,7 +379,7 @@ class Tradingbot():
     def order(self, code, dir, price, qty):
         upbit = Upbitpy(self.KEY, self.SECRET)
         ret = upbit.order(code, dir, qty, price) #e.g. ('KRW-BTC', 'bid', 10, 300)
-        logging.info('%s, %s, %d, %f'%(code,dir,price,qty))
+        logging.info('%s, %s, %d, %.2f'%(code,dir,price,qty))
         logging.info(ret)
         
     def market_price(self, number, weight):      #only if price is greater than 100
