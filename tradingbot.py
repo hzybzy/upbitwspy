@@ -312,6 +312,7 @@ class Tradingbot():
                                 if self.USD2KRW_ETH > self.USD2KRW_weighted and self.balance['USDT'] > self.cross_order_unit_eth*self.mybook['USDT-ETH'].ask * 1.1 : 
                                     #김프 설정된 값보다 큰 경우, 실행
                                     #USD2KRW, KRW-BTC:매도 , USDT-BTC:매수
+                                    
                                     t1 = threading.Thread(target=self.order,args=('KRW-ETH','ask', self.market_price(self.mybook['KRW-ETH'].bid, 0.9), self.cross_order_unit_eth))
                                     t2 = threading.Thread(target=self.order,args=('USDT-ETH','bid', self.market_price(self.mybook['USDT-ETH'].ask, 1.1), self.cross_order_unit_eth))
                                     t1.start()
@@ -378,6 +379,7 @@ class Tradingbot():
     def order(self, code, dir, price, qty):
         upbit = Upbitpy(self.KEY, self.SECRET)
         ret = upbit.order(code, dir, qty, price) #e.g. ('KRW-BTC', 'bid', 10, 300)
+        logging.info('%s, %s, %d, %f'%(code,dir,price,qty))
         logging.info(ret)
         
     def market_price(self, number, weight):      #only if price is greater than 100
