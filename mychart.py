@@ -63,13 +63,17 @@ def graph_update(n_clicks, period):
     trace4 = go.Candlestick(x=df4.index,open=df4['open'],high=df4['high'],low=df4['low'],close=df4['close'],
                            increasing={'line': {'color': '#00CC94'}},decreasing={'line': {'color': '#F50030'}})                       
     return {'data': [trace1], 'layout': go.Layout(title=f"KRW2USD",\
-            shapes = [dict(x0=0, x1=1, y0=KRW2USD, y1=KRW2USD, xref='paper', yref='y', line_width=2)])},\
+            shapes = [dict(x0=0, x1=1, y0=KRW2USD, y1=KRW2USD, xref='paper', yref='y', line_width=2, line_color="rgb(200,0,0)")],\
+            annotations=[dict(x=0, y=KRW2USD-0.1, xref='paper', yref='y', showarrow=False, xanchor='left', text='%.2f'%KRW2USD)])},\
             {'data': [trace2], 'layout': go.Layout(title=f"USD2KRW",\
-            shapes = [dict(x0=0, x1=1, y0=USD2KRW, y1=USD2KRW, xref='paper', yref='y', line_width=2)])},\
+            shapes = [dict(x0=0, x1=1, y0=USD2KRW, y1=USD2KRW, xref='paper', yref='y', line_width=2, line_color="rgb(0,0,200)")],\
+            annotations=[dict(x=0, y=USD2KRW+0.1, xref='paper', yref='y', showarrow=False, xanchor='left', text='%.2f'%USD2KRW)])},\
             {'data': [trace3], 'layout': go.Layout(title=f"KRW2USD_ETH",\
-            shapes = [dict(x0=0, x1=1, y0=KRW2USD, y1=KRW2USD, xref='paper', yref='y', line_width=2)])},\
+            shapes = [dict(x0=0, x1=1, y0=KRW2USD, y1=KRW2USD, xref='paper', yref='y', line_width=2, line_color="rgb(200,0,0)")],\
+            annotations=[dict(x=0, y=KRW2USD-0.1, xref='paper', yref='y', showarrow=False, xanchor='left', text='%.2f'%KRW2USD)])},\
             {'data': [trace4], 'layout': go.Layout(title=f"USD2KRW_ETH",\
-            shapes = [dict(x0=0, x1=1, y0=USD2KRW, y1=USD2KRW, xref='paper', yref='y', line_width=2)])}
+            shapes = [dict(x0=0, x1=1, y0=USD2KRW, y1=USD2KRW, xref='paper', yref='y', line_width=2, line_color="rgb(0,0,200)")],\
+            annotations=[dict(x=0, y=USD2KRW+0.1, xref='paper', yref='y', showarrow=False, xanchor='left', text='%.2f'%USD2KRW)])}
     
 
 
