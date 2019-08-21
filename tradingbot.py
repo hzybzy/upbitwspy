@@ -312,8 +312,8 @@ class Tradingbot():
                                 if self.USD2KRW_ETH > self.USD2KRW_weighted and self.balance['USDT'] > self.cross_order_unit_eth*self.mybook['USDT-ETH'].ask * 1.1 : 
                                     #김프 설정된 값보다 큰 경우, 실행
                                     #USD2KRW, KRW-BTC:매도 , USDT-BTC:매수
-                                    t1 = threading.Thread(target=self.order,args=('KRW-BTC','ask', self.market_price(self.mybook['KRW-ETH'].bid, 0.9), self.cross_order_unit_eth))
-                                    t2 = threading.Thread(target=self.order,args=('USDT-BTC','bid', self.market_price(self.mybook['USDT-ETH'].ask, 1.1), self.cross_order_unit_eth))
+                                    t1 = threading.Thread(target=self.order,args=('KRW-ETH','ask', self.market_price(self.mybook['KRW-ETH'].bid, 0.9), self.cross_order_unit_eth))
+                                    t2 = threading.Thread(target=self.order,args=('USDT-ETH','bid', self.market_price(self.mybook['USDT-ETH'].ask, 1.1), self.cross_order_unit_eth))
                                     t1.start()
                                     t2.start()
                                     t1.join()
