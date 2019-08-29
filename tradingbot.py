@@ -363,7 +363,8 @@ class Tradingbot():
                 self.USD2KRW_weighted = self.USD2KRW_limit
 
             if self.USD2KRW_weighted < self.USD2KRW_restrict:
-                self.USD2KRW_weighted = self.USD2KRW_restrict
+                self.USD2KRW_weighted = self.USD2KRW_weighted / 4 + 0.75
+                # self.USD2KRW_weighted = self.USD2KRW_restrict
             if self.KRW2USD_weighted > 0.0:
                 self.KRW2USD_weighted = self.KRW2USD_weighted * 0.5
             #보유자산에 따른 KRW2USD_limit and USD2KRW_limt 가중치 부여 계단법
