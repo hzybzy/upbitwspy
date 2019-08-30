@@ -32,6 +32,7 @@ class Tradingbot():
     balance['USDT'] = 0.0
     balance['BTC'] = 0.0
     balance['ETH'] = 0.0
+    balance['XRP'] = 0.0
 
     exchange_rate = 0.0
     
@@ -46,16 +47,29 @@ class Tradingbot():
 
     weight_offset = 0.0
 
-    KRW2USD = 0.0
-    USD2KRW = 0.0
-    KRW2USD_ETH = 0.0
-    USD2KRW_ETH = 0.0
+    # KRW2USD = 0.0
+    # USD2KRW = 0.0
+    # KRW2USD_ETH = 0.0
+    # USD2KRW_ETH = 0.0
+    # KRW2USD_XRP = 0.0
+    # USD2KRW_XRP = 0.0
+    KRW2USD = {}    
+    KRW2USD['BTC'] = 0.0    
+    KRW2USD['ETH'] = 0.0    
+    KRW2USD['XRP'] = 0.0
+
+    USD2KRW = {}
+    USD2KRW['BTC'] = 0.0
+    USD2KRW['ETH'] = 0.0
+    USD2KRW['XRP'] = 0.0
 
     mybook = {}
     mybook['KRW-BTC'] = Orderbook('KRW-BTC')
     mybook['KRW-ETH'] = Orderbook('KRW-ETH')
+    mybook['KRW-XRP'] = Orderbook('KRW-XRP')
     mybook['USDT-BTC'] = Orderbook('USDT-BTC')
     mybook['USDT-ETH'] = Orderbook('USDT-ETH')
+    mybook['USDT-XRP'] = Orderbook('USDT-XRP')
 
     krw_ask = 0.0
     krw_bid = 0.0
@@ -73,8 +87,10 @@ class Tradingbot():
 
     cross_order_unit = 0.005
     cross_order_unit_eth = 0.2
+    cross_order_unit_xrp = 150
     btc_stop_unit = 0.01
     eth_stop_unit = 0.5
+    cross_order_unit_xrp = 200
 
     order_flag = False
 
@@ -99,6 +115,34 @@ class Tradingbot():
             self.get_accounts()
             self.order_flag = True
         time.sleep(1)
+
+    def KRW2USD_exec(self, coin):
+        if self.KRW2USD[coin] < self.KRW2USD_weighted and self.balance['KRW'] > self.cross_order_unit*self.mybook['KRW-'+coin].ask * 1.1 : 
+            #역프 설정된 값보다 작은 경우, 실행
+            #KRW2USD, KRW-BTC:매수;bid , USDT-BTC:매도;ask
+            t1 = threading.Thread(target=self.order,args=('KRW-'+coin,'bid', self.market_price(self.mybook['KRW-'+coin].ask , 1.1), self.cross_order_unit))
+            t2 = threading.Thread(target=self.order,args=('USDT-'+coin,'ask', self.market_price(self.mybook['USDT-'+coin].bid, 0.9), self.cross_order_unit))
+            t1.start()
+            t2.start()
+            t1.join()
+            t2.join()
+            self.cooldown_order()
+            logging.info('KRW2USD_' + coin)
+            time.sleep(0.1)
+
+    def USD2KRW_exec(self, coin):
+        if self.USD2KRW[coin] > self.USD2KRW_weighted and self.balance['USDT'] > self.cross_order_unit_eth*self.mybook['USDT-'+coin].ask * 1.1 : 
+            #김프 설정된 값보다 큰 경우, 실행
+            #USD2KRW, KRW-BTC:매도 , USDT-BTC:매수            
+            t1 = threading.Thread(target=self.order,args=('KRW-'+coin,'ask', self.market_price(self.mybook['KRW-'+coin].bid, 0.9), self.cross_order_unit_eth))
+            t2 = threading.Thread(target=self.order,args=('USDT-'+coin,'bid', self.market_price(self.mybook['USDT-'+coin].ask, 1.1), self.cross_order_unit_eth))
+            t1.start()
+            t2.start()
+            t1.join()
+            t2.join()
+            self.cooldown_order()
+            logging.info('USD2KRW_'+coin)
+            time.sleep(0.1)
 
     def cooldown_order(self):
         self.order_flag = False
@@ -126,7 +170,7 @@ class Tradingbot():
 
         while True:       
             #text = '%.3f, %.3f, %d, %d, %f, %f, %.2f' % (self.KRW2USD, self.USD2KRW, self.mybook['KRW-BTC'].ask, self.mybook['KRW-BTC'].bid, self.mybook['USDT-BTC'].ask, self.mybook['USDT-BTC'].bid, self.exchange_rate)
-            text = '%.3f, %.3f, %.3f, %.3f, %.2f' % (self.KRW2USD, self.USD2KRW, self.KRW2USD_ETH ,self.USD2KRW_ETH, self.exchange_rate)
+            text = '%.3f, %.3f, %.3f, %.3f, %.3f, %.3f, %.2f' % (self.KRW2USD, self.USD2KRW, self.KRW2USD_ETH ,self.USD2KRW_ETH, self.KRW2USD_XRP ,self.USD2KRW_XRP, self.exchange_rate)
             logging.info(text)
             if self.mybook['KRW-BTC'].ask > 0.0 and self.mybook['USDT-BTC'].ask > 0.0 and self.exchange_rate > 0.0:                 
                 now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")            
@@ -192,11 +236,13 @@ class Tradingbot():
                 upbitws.lock_a.acquire()
                 
                 #get data from upbit websocket
-                if upbitws.data_flag and upbitws.orderbook[upbitws.codeindex['KRW-BTC']].units and upbitws.orderbook[upbitws.codeindex['USDT-BTC']].units and upbitws.orderbook[upbitws.codeindex['KRW-ETH']].units and upbitws.orderbook[upbitws.codeindex['USDT-ETH']].units:
+                if upbitws.data_flag and upbitws.orderbook[upbitws.codeindex['KRW-BTC']].units and upbitws.orderbook[upbitws.codeindex['USDT-BTC']].units and upbitws.orderbook[upbitws.codeindex['KRW-ETH']].units and upbitws.orderbook[upbitws.codeindex['USDT-ETH']].units and upbitws.orderbook[upbitws.codeindex['KRW-XRP']].units and upbitws.orderbook[upbitws.codeindex['USDT-XRP']].units:
                     self.mybook['KRW-BTC'].timestamp = upbitws.orderbook[upbitws.codeindex['KRW-BTC']].timestamp
                     self.mybook['USDT-BTC'].timestamp = upbitws.orderbook[upbitws.codeindex['USDT-BTC']].timestamp
                     self.mybook['KRW-ETH'].timestamp = upbitws.orderbook[upbitws.codeindex['KRW-ETH']].timestamp
                     self.mybook['USDT-ETH'].timestamp = upbitws.orderbook[upbitws.codeindex['USDT-ETH']].timestamp
+                    self.mybook['KRW-XRP'].timestamp = upbitws.orderbook[upbitws.codeindex['KRW-XRP']].timestamp
+                    self.mybook['USDT-XRP'].timestamp = upbitws.orderbook[upbitws.codeindex['USDT-XRP']].timestamp
                     
                     #btc
                     qty = 0.0
@@ -249,8 +295,32 @@ class Tradingbot():
                         if qty > self.cross_order_unit_eth * 2:
                             break              
 
-                    
-                    
+                    #xrp
+                    qty = 0.0
+                    for i in range(10):
+                        self.mybook['KRW-XRP'].ask = upbitws.orderbook[upbitws.codeindex['KRW-XRP']].units[i].ask_price
+                        qty += upbitws.orderbook[upbitws.codeindex['KRW-XRP']].units[i].ask_size
+                        if qty > self.cross_order_unit_xrp * 2:
+                            break
+                    qty = 0.0
+                    for i in range(10):
+                        self.mybook['KRW-XRP'].bid = upbitws.orderbook[upbitws.codeindex['KRW-XRP']].units[i].bid_price
+                        qty += upbitws.orderbook[upbitws.codeindex['KRW-XRP']].units[i].bid_size
+                        if qty > self.cross_order_unit_xrp * 2:
+                            break
+                    qty = 0.0
+                    for i in range(10):
+                        self.mybook['USDT-XRP'].ask = upbitws.orderbook[upbitws.codeindex['USDT-XRP']].units[i].ask_price
+                        qty += upbitws.orderbook[upbitws.codeindex['USDT-XRP']].units[i].ask_size
+                        if qty > self.cross_order_unit_xrp * 2:
+                            break
+                    qty = 0.0
+                    for i in range(10):
+                        self.mybook['USDT-XRP'].bid = upbitws.orderbook[upbitws.codeindex['USDT-XRP']].units[i].bid_price
+                        qty += upbitws.orderbook[upbitws.codeindex['USDT-XRP']].units[i].bid_size
+                        if qty > self.cross_order_unit_xrp * 2:
+                            break    
+
                     upbitws.data_flag = False
                     update_flag = True                
                 
@@ -259,70 +329,24 @@ class Tradingbot():
                 #timestamp 차이 10초 미만, 김프 계산식에 사용할 변수들 0이 아닌 경우 진행
                 if update_flag:
                     if time.time() - self.mybook['KRW-BTC'].timestamp - self.mybook['USDT-BTC'].timestamp < 10 and self.mybook['USDT-BTC'].bid > 0.0 and self.mybook['KRW-BTC'].ask > 0.0 and self.exchange_rate > 0.0:
-                        self.KRW2USD = (self.mybook['KRW-BTC'].ask  - self.mybook['USDT-BTC'].bid * self.exchange_rate)/(self.mybook['USDT-BTC'].bid * self.exchange_rate) * 100
-                        self.USD2KRW = (self.mybook['KRW-BTC'].bid - self.mybook['USDT-BTC'].ask * self.exchange_rate)/(self.mybook['USDT-BTC'].ask * self.exchange_rate) * 100
-                        self.KRW2USD_ETH = (self.mybook['KRW-ETH'].ask  - self.mybook['USDT-ETH'].bid * self.exchange_rate)/(self.mybook['USDT-ETH'].bid * self.exchange_rate) * 100
-                        self.USD2KRW_ETH = (self.mybook['KRW-ETH'].bid - self.mybook['USDT-ETH'].ask * self.exchange_rate)/(self.mybook['USDT-ETH'].ask * self.exchange_rate) * 100    
+                        self.KRW2USD['BTC'] = (self.mybook['KRW-BTC'].ask  - self.mybook['USDT-BTC'].bid * self.exchange_rate)/(self.mybook['USDT-BTC'].bid * self.exchange_rate) * 100
+                        self.USD2KRW['BTC'] = (self.mybook['KRW-BTC'].bid - self.mybook['USDT-BTC'].ask * self.exchange_rate)/(self.mybook['USDT-BTC'].ask * self.exchange_rate) * 100
+                        self.KRW2USD['ETH'] = (self.mybook['KRW-ETH'].ask  - self.mybook['USDT-ETH'].bid * self.exchange_rate)/(self.mybook['USDT-ETH'].bid * self.exchange_rate) * 100
+                        self.USD2KRW['ETH'] = (self.mybook['KRW-ETH'].bid - self.mybook['USDT-ETH'].ask * self.exchange_rate)/(self.mybook['USDT-ETH'].ask * self.exchange_rate) * 100 
+                        self.KRW2USD['XRP'] = (self.mybook['KRW-XRP'].ask  - self.mybook['USDT-XRP'].bid * self.exchange_rate)/(self.mybook['USDT-XRP'].bid * self.exchange_rate) * 100
+                        self.USD2KRW['XRP'] = (self.mybook['KRW-XRP'].bid - self.mybook['USDT-XRP'].ask * self.exchange_rate)/(self.mybook['USDT-XRP'].ask * self.exchange_rate) * 100       
 
                         
                         if self.balance['BTC'] > self.cross_order_unit and self.order_flag and self.balance['BTC'] < self.btc_stop_unit and self.balance['ETH'] > self.cross_order_unit_eth and self.order_flag and self.balance['ETH'] < self.eth_stop_unit:
-                            if self.KRW2USD < self.KRW2USD_ETH :  #역프는 작을수록 유리
-                                if self.KRW2USD < self.KRW2USD_weighted and self.balance['KRW'] > self.cross_order_unit*self.mybook['KRW-BTC'].ask * 1.1 : 
-                                    #역프 설정된 값보다 작은 경우, 실행
-                                    #KRW2USD, KRW-BTC:매수;bid , USDT-BTC:매도;ask
-                                    t1 = threading.Thread(target=self.order,args=('KRW-BTC','bid', self.market_price(self.mybook['KRW-BTC'].ask , 1.1), self.cross_order_unit))
-                                    t2 = threading.Thread(target=self.order,args=('USDT-BTC','ask', self.market_price(self.mybook['USDT-BTC'].bid, 0.9), self.cross_order_unit))
-                                    t1.start()
-                                    t2.start()
-                                    t1.join()
-                                    t2.join()
-                                    self.cooldown_order()
-                                    logging.info('KRW2USD!!')
-                                    time.sleep(0.1)
-                                    continue
+                            if self.KRW2USD['BTC'] < self.KRW2USD['ETH'] :  #역프는 작을수록 유리
+                                self.KRW2USD_exec('BTC')                                
                             else:
-                                if self.KRW2USD_ETH < self.KRW2USD_weighted and self.balance['KRW'] > self.cross_order_unit_eth*self.mybook['KRW-ETH'].ask * 1.1 : 
-                                    #역프 설정된 값보다 작은 경우, 실행
-                                    #KRW2USD, KRW-BTC:매수;bid , USDT-BTC:매도;ask
-                                    t1 = threading.Thread(target=self.order,args=('KRW-ETH','bid', self.market_price(self.mybook['KRW-ETH'].ask , 1.1), self.cross_order_unit_eth))
-                                    t2 = threading.Thread(target=self.order,args=('USDT-ETH','ask', self.market_price(self.mybook['USDT-ETH'].bid, 0.9), self.cross_order_unit_eth))
-                                    t1.start()
-                                    t2.start()
-                                    t1.join()
-                                    t2.join()
-                                    self.cooldown_order()
-                                    logging.info('KRW2USD_ETH!!')
-                                    time.sleep(0.1)
-                                    continue
-                            if self.USD2KRW > self.USD2KRW_ETH :  #김프는 작을수록 유리        
-                                if self.USD2KRW > self.USD2KRW_weighted and self.balance['USDT'] > self.cross_order_unit*self.mybook['USDT-BTC'].ask * 1.1 : 
-                                    #김프 설정된 값보다 큰 경우, 실행
-                                    #USD2KRW, KRW-BTC:매도 , USDT-BTC:매수
-                                    t1 = threading.Thread(target=self.order,args=('KRW-BTC','ask', self.market_price(self.mybook['KRW-BTC'].bid, 0.9), self.cross_order_unit))
-                                    t2 = threading.Thread(target=self.order,args=('USDT-BTC','bid', self.market_price(self.mybook['USDT-BTC'].ask, 1.1), self.cross_order_unit))
-                                    t1.start()
-                                    t2.start()
-                                    t1.join()
-                                    t2.join()
-                                    self.cooldown_order()
-                                    logging.info('USD2KRW')
-                                    time.sleep(0.1)
-                                    continue
+                                self.KRW2USD_exec('ETH')
+                                
+                            if self.USD2KRW['BTC'] > self.USD2KRW['ETH'] :  #김프는 클수록 유리        
+                                self.USD2KRW_exec('BTC')
                             else:
-                                if self.USD2KRW_ETH > self.USD2KRW_weighted and self.balance['USDT'] > self.cross_order_unit_eth*self.mybook['USDT-ETH'].ask * 1.1 : 
-                                    #김프 설정된 값보다 큰 경우, 실행
-                                    #USD2KRW, KRW-BTC:매도 , USDT-BTC:매수
-                                    
-                                    t1 = threading.Thread(target=self.order,args=('KRW-ETH','ask', self.market_price(self.mybook['KRW-ETH'].bid, 0.9), self.cross_order_unit_eth))
-                                    t2 = threading.Thread(target=self.order,args=('USDT-ETH','bid', self.market_price(self.mybook['USDT-ETH'].ask, 1.1), self.cross_order_unit_eth))
-                                    t1.start()
-                                    t2.start()
-                                    t1.join()
-                                    t2.join()
-                                    self.cooldown_order()
-                                    logging.info('USD2KRW_ETH')
-                                    time.sleep(0.1)
-                                    continue
+                                self.USD2KRW_exec('ETH')
                         
                         #TODO : buy if cross_order_unit is smaller than settings
                         # elif self.balance['BTC'] < self.cross_order_unit and self.order_flag and self.balance['BTC'] < self.btc_stop_unit:
@@ -442,7 +466,7 @@ class Tradingbot():
 
 def worker_get_orderbook(upbit):
     #start worker
-    upbit.set_type("orderbook",["KRW-BTC","USDT-BTC","KRW-ETH","USDT-ETH"])
+    upbit.set_type("orderbook",["KRW-BTC","USDT-BTC","KRW-ETH","USDT-ETH","KRW-XRP","USDT-XRP"])
     upbit.run()
 
 if __name__ == '__main__':
