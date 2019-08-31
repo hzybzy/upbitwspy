@@ -159,12 +159,12 @@ class Tradingbot():
         db = sqlite3.connect(db_filename, detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
         cursor = db.cursor()
         cursor.execute('''CREATE TABLE IF NOT EXISTS upbit_premium(date timestamp, 
-            KRW2USD FLOAT, USD2KRW FLOAT, KRW2USD_ETH FLOAT, USD2KRW_ETH FLOAT,
+            KRW2USD FLOAT, USD2KRW FLOAT, KRW2USD_ETH FLOAT, USD2KRW_ETH FLOAT, KRW2USD_XRP FLOAT, USD2KRW_XRP FLOAT,
             EXCHANGE_RATE FLOAT, KRW2USD_weight FLOAT, USD2KRW_weight FLOAT)''')
         
         db_patch = []
-        db_patch.append("ALTER TABLE upbit_premium ADD column KRW2USD_XRP FLOAT")
-        db_patch.append("ALTER TABLE upbit_premium ADD column USD2KRW_XRP FLOAT")
+        # db_patch.append("ALTER TABLE upbit_premium ADD column KRW2USD_XRP FLOAT")
+        # db_patch.append("ALTER TABLE upbit_premium ADD column USD2KRW_XRP FLOAT")
         # db_patch.append("ALTER TABLE coin_premium ADD column balance_krw FLOAT")
         # db_patch.append("ALTER TABLE coin_premium ADD column balance_usd FLOAT")
         for q in db_patch:
