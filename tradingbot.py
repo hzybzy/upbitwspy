@@ -113,10 +113,10 @@ class Tradingbot():
             
     def worker_cooldown(self):        
         if self.order_flag == False:
-            time.sleep(5)
+            time.sleep(2)
             self.get_accounts()
             self.order_flag = True
-        time.sleep(1)
+        time.sleep(0.5)
 
     def KRW2USD_exec(self, coin):
         now = time.time()
