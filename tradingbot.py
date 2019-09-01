@@ -125,7 +125,7 @@ class Tradingbot():
                 #역프 설정된 값보다 작은 경우, 실행
                 #KRW2USD, KRW-BTC:매수;bid , USDT-BTC:매도;ask
                 t1 = threading.Thread(target=self.order,args=('KRW-'+coin,'bid', self.market_price(self.mybook['KRW-'+coin].ask , 1.1), self.cross_order_unit[coin]))
-                t2 = threading.Thread(target=self.order,args=('USDT-'+coin,'ask', self.market_price(self.mybook['USDT-'+coin].bid, 0.9), self.cross_order_unit[coin]))
+                t2 = threading.Thread(target=self.order,args=('USDT-'+coin,'ask', self.market_price_usdt(self.mybook['USDT-'+coin].bid, 0.9), self.cross_order_unit[coin]))
                 t1.start()
                 t2.start()
                 t1.join()
@@ -141,7 +141,7 @@ class Tradingbot():
                 #김프 설정된 값보다 큰 경우, 실행
                 #USD2KRW, KRW-BTC:매도 , USDT-BTC:매수            
                 t1 = threading.Thread(target=self.order,args=('KRW-'+coin,'ask', self.market_price(self.mybook['KRW-'+coin].bid, 0.9), self.cross_order_unit[coin]))
-                t2 = threading.Thread(target=self.order,args=('USDT-'+coin,'bid', self.market_price(self.mybook['USDT-'+coin].ask, 1.1), self.cross_order_unit[coin]))
+                t2 = threading.Thread(target=self.order,args=('USDT-'+coin,'bid', self.market_price_usdt(self.mybook['USDT-'+coin].ask, 1.1), self.cross_order_unit[coin]))
                 t1.start()
                 t2.start()
                 t1.join()
@@ -410,7 +410,7 @@ class Tradingbot():
                 self.USD2KRW_weighted = self.USD2KRW_limit
 
             if self.USD2KRW_weighted < self.USD2KRW_restrict:
-                self.USD2KRW_weighted = self.USD2KRW_weighted / 4 + 0.75
+                self.USD2KRW_weighted = self.USD2KRW_weighted / 2 + 0.5
                 # self.USD2KRW_weighted = self.USD2KRW_restrict
             if self.KRW2USD_weighted > 0.0:
                 self.KRW2USD_weighted = self.KRW2USD_weighted * 0.5
@@ -427,10 +427,14 @@ class Tradingbot():
 
  
     def order(self, code, dir, price, qty):
-        upbit = Upbitpy(self.KEY, self.SECRET)
-        ret = upbit.order(code, dir, qty, price) #e.g. ('KRW-BTC', 'bid', 10, 300)
         logging.info('%s, %s, %d, %.2f'%(code,dir,price,qty))
-        logging.info(ret)
+        try:
+            upbit = Upbitpy(self.KEY, self.SECRET)
+            ret = upbit.order(code, dir, qty, price) #e.g. ('KRW-BTC', 'bid', 10, 300)            
+            logging.info(ret)
+        except:
+            logging.info('Order Err')
+        
         
     def market_price(self, number, weight):      #only if price is greater than 100
         count = self.digit_count(number)
@@ -442,6 +446,11 @@ class Tradingbot():
         for t in range(count - 3):
             number = number * 10
         return number
+
+    
+    def market_price_usdt(self, number, weight):      #only if price is greater than .xxx    
+        number = number * weight    
+        return round(number,3)
 
     def digit_count(self, number):
         count = 0
