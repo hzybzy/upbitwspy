@@ -416,7 +416,9 @@ class Tradingbot():
                 self.KRW2USD_weighted = self.KRW2USD_weighted * 0.5
             #보유자산에 따른 KRW2USD_limit and USD2KRW_limt 가중치 부여 계단법
             #temp, self.USD2KRW_weighted = self.rate_limit()
-
+        # ! For debugging
+        # self.KRW2USD_weighted = 1.0
+        # self.USD2KRW_weighted = -1.0
         logging.info('Weight %.2f %.2f'%(self.KRW2USD_weighted, self.USD2KRW_weighted))
 
 
@@ -427,7 +429,7 @@ class Tradingbot():
 
  
     def order(self, code, dir, price, qty):
-        logging.info('%s, %s, %d, %.2f'%(code,dir,price,qty))
+        logging.info('%s, %s, %f, %f'%(code,dir,price,qty))
         try:
             upbit = Upbitpy(self.KEY, self.SECRET)
             ret = upbit.order(code, dir, qty, price) #e.g. ('KRW-BTC', 'bid', 10, 300)            
@@ -437,6 +439,7 @@ class Tradingbot():
         
         
     def market_price(self, number, weight):      #only if price is greater than 100
+        logging.info('calculate market_price : %f, %f'%(number, weight))
         count = self.digit_count(number)
         number = number * weight
         
@@ -445,8 +448,12 @@ class Tradingbot():
         number = int(number)
         for t in range(count - 3):
             number = number * 10
+        logging.info('calculate market_price : %f'%(number))
         return number
 
+    def market_price_krw(self, number, weight):      #only if price is greater than 100
+        number = number * weight / 100
+        return round(number,2)*100
     
     def market_price_usdt(self, number, weight):      #only if price is greater than .xxx    
         number = number * weight    
